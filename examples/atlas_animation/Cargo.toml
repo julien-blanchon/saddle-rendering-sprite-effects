@@ -1,0 +1,13 @@
+[package]
+name = "saddle-rendering-sprite-effects-example-atlas-animation"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+bevy = { workspace = true }
+saddle-rendering-sprite-effects = { workspace = true }
+saddle-rendering-sprite-effects-example-common = { path = "../common" }
+
+[lints]
+workspace = true

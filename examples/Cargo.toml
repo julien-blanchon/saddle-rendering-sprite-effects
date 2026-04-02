@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "common",
+    "basic",
+    "flash",
+    "dissolve",
+    "palette_swap",
+    "atlas_animation",
+    "stress",
+    "lab",
+]
+resolver = "3"
+
+[workspace.dependencies]
+bevy = "0.18"
+saddle-rendering-sprite-effects = { path = ".." }
+
+[workspace.lints.clippy]
+too_many_arguments = "allow"
+type_complexity = "allow"
+nonstandard_macro_braces = "warn"
