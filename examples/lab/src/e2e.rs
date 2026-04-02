@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_e2e::{E2ESet, action::Action, init_scenario};
+use saddle_bevy_e2e::{E2ESet, action::Action, init_scenario};
 use saddle_rendering_sprite_effects::SpriteEffectsSystems;
 
 use crate::scenarios;
@@ -8,7 +8,7 @@ pub struct SpriteEffectsLabE2EPlugin;
 
 impl Plugin for SpriteEffectsLabE2EPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(bevy_e2e::E2EPlugin);
+        app.add_plugins(saddle_bevy_e2e::E2EPlugin);
         app.configure_sets(Update, E2ESet.before(SpriteEffectsSystems::Prepare));
 
         let args: Vec<String> = std::env::args().collect();
