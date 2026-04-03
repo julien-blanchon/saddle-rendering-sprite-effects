@@ -31,7 +31,9 @@ pub fn has_proxy_child(world: &World, entity: Entity) -> bool {
 }
 
 pub fn proxy_sorts_ahead_of_parent(world: &World, entity: Entity) -> bool {
-    let Some(parent_z) = world.get::<Transform>(entity).map(|transform| transform.translation.z)
+    let Some(parent_z) = world
+        .get::<Transform>(entity)
+        .map(|transform| transform.translation.z)
     else {
         return false;
     };

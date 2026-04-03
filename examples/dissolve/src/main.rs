@@ -2,7 +2,9 @@ use saddle_rendering_sprite_effects_example_common as common;
 
 use bevy::prelude::*;
 use common::{add_demo_assets, install_auto_exit, setup_camera};
-use saddle_rendering_sprite_effects::{DissolveConfig, DissolveEffect, DissolvePattern, SpriteEffectsPlugin};
+use saddle_rendering_sprite_effects::{
+    DissolveConfig, DissolveEffect, DissolvePattern, SpriteEffectsPlugin,
+};
 
 #[derive(Resource)]
 struct DissolveCycle(Timer);

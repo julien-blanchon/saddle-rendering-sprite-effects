@@ -89,7 +89,11 @@ fn setup(
         }),
     ));
 
-    spawn_label(&mut commands, "Clean outline", Vec3::new(-250.0, -175.0, 5.0));
+    spawn_label(
+        &mut commands,
+        "Clean outline",
+        Vec3::new(-250.0, -175.0, 5.0),
+    );
     spawn_label(
         &mut commands,
         "Behind-ruin silhouette",
