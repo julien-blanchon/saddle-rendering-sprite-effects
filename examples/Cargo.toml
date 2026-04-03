@@ -5,6 +5,7 @@ members = [
     "flash",
     "dissolve",
     "palette_swap",
+    "outline_silhouette",
     "atlas_animation",
     "stress",
     "lab",

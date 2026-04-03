@@ -11,11 +11,13 @@
   - dissolve
   - palette swap
   - screen-style flash
+  - alpha-edge outline
+  - silhouette tint
 
 Why this split:
 
 - flash tint and squash/stretch are cheap and do not need a shader
-- dissolve and palette remap are fundamentally per-pixel operations
+- dissolve, palette remap, outline, and silhouette are fundamentally per-pixel operations
 - projects that only need hit flash and squash do not pay for a material-backed path
 - projects that do need shader effects still trigger them through the same authored component surface
 
@@ -47,7 +49,7 @@ Why this split:
 
 - decide whether each entity needs the proxy child this frame
 - spawn or despawn the proxy child explicitly
-- sync atlas-aware UV bounds, authored tint/alpha, flash data, dissolve data, and palette data into the proxy material
+- sync atlas-aware UV bounds, authored tint/alpha, flash data, dissolve data, palette data, outline data, and silhouette data into the proxy material
 - hide the authored sprite by alpha while a proxy is active
 
 ### `Cleanup`
@@ -89,6 +91,8 @@ Each entity gets one authored component slot per effect family.
 - dissolve: restarting the component replaces the dissolve state immediately
 - squash/stretch: restarting the component restarts the envelope immediately
 - palette swap: changing the config updates the proxy material next frame
+- outline: changing the config updates the proxy material next frame
+- silhouette: changing the config updates the proxy material next frame
 
 The crate intentionally does not queue or blend multiple authored components of the same family on one entity. That policy would require a different API surface than “component is the source of truth”.
 
@@ -103,6 +107,8 @@ Source sampling uses the atlas rect, while dissolve masks and directional patter
 
 - left-to-right and radial dissolve behavior consistent across atlas frames
 - mask textures authored in sprite-local UV space
+- outlines confined to the current frame instead of bleeding across the full sheet
+- silhouettes confined to the current frame's opaque pixels
 - atlas animation compatible with proxy-backed effects
 
 ## Pixel-Art Constraints
@@ -138,6 +144,6 @@ Shader path:
 
 Tradeoff:
 
-- persistent palette swaps imply persistent proxy materials
+- persistent palette swaps, outlines, or silhouettes imply persistent proxy materials
 - this is acceptable for moderate counts and predictable for stress scenes
 - if a project wants palette remap on thousands of sprites at once, it should budget for that explicitly rather than expecting zero-cost recolor

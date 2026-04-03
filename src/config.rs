@@ -64,6 +64,42 @@ pub enum SquashOverlap {
 }
 
 #[derive(Reflect, Clone, Debug, PartialEq)]
+pub struct OutlineConfig {
+    pub color: Color,
+    pub width_pixels: f32,
+    pub alpha_threshold: f32,
+}
+
+impl Default for OutlineConfig {
+    fn default() -> Self {
+        Self {
+            color: Color::BLACK,
+            width_pixels: 1.0,
+            alpha_threshold: 0.05,
+        }
+    }
+}
+
+#[derive(Reflect, Clone, Debug, PartialEq)]
+pub struct SilhouetteConfig {
+    pub color: Color,
+    pub tint_strength: f32,
+    pub alpha_threshold: f32,
+    pub sort_offset: f32,
+}
+
+impl Default for SilhouetteConfig {
+    fn default() -> Self {
+        Self {
+            color: Color::srgba(0.18, 0.82, 1.0, 0.88),
+            tint_strength: 1.0,
+            alpha_threshold: 0.05,
+            sort_offset: 0.25,
+        }
+    }
+}
+
+#[derive(Reflect, Clone, Debug, PartialEq)]
 pub struct FlashConfig {
     pub color: Color,
     pub intensity: f32,

@@ -4,10 +4,14 @@ struct SpriteEffectsUniform {
     base_color: vec4<f32>,
     flash_color: vec4<f32>,
     edge_color: vec4<f32>,
+    outline_color: vec4<f32>,
+    silhouette_color: vec4<f32>,
     uv_rect: vec4<f32>,
     flash: vec4<f32>,
     dissolve: vec4<f32>,
     dissolve_aux: vec4<f32>,
+    outline: vec4<f32>,
+    silhouette: vec4<f32>,
     palette: vec4<f32>,
     flags: vec4<f32>,
 };
@@ -42,6 +46,13 @@ fn remap_uv(local_uv: vec2<f32>) -> vec2<f32> {
     );
     let texel = 0.5 / vec2<f32>(textureDimensions(source_texture));
     return clamp(uv_rect, min_uv + texel, max_uv - texel);
+}
+
+fn clamp_source_uv(uv: vec2<f32>) -> vec2<f32> {
+    let min_uv = material.uv_rect.xy;
+    let max_uv = material.uv_rect.zw;
+    let texel = 0.5 / vec2<f32>(textureDimensions(source_texture));
+    return clamp(uv, min_uv + texel, max_uv - texel);
 }
 
 fn hash21(p: vec2<f32>) -> f32 {
@@ -119,50 +130,96 @@ fn dissolve_value(uv: vec2<f32>) -> f32 {
     return dot(sampled.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
 }
 
+fn outline_alpha(source_uv: vec2<f32>, base_alpha: f32) -> f32 {
+    if material.outline.z < 0.5 || base_alpha > material.outline.y {
+        return 0.0;
+    }
+
+    let width = material.outline.x;
+    if width <= 0.0 {
+        return 0.0;
+    }
+
+    let texel = width / vec2<f32>(textureDimensions(source_texture));
+    var neighbor_alpha = 0.0;
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>( texel.x, 0.0)), 0.0).a);
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>(-texel.x, 0.0)), 0.0).a);
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>(0.0,  texel.y)), 0.0).a);
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>(0.0, -texel.y)), 0.0).a);
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>( texel.x,  texel.y)), 0.0).a);
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>( texel.x, -texel.y)), 0.0).a);
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>(-texel.x,  texel.y)), 0.0).a);
+    neighbor_alpha = max(neighbor_alpha, textureSampleLevel(source_texture, source_sampler, clamp_source_uv(source_uv + vec2<f32>(-texel.x, -texel.y)), 0.0).a);
+
+    if neighbor_alpha > material.outline.y {
+        return neighbor_alpha;
+    }
+    return 0.0;
+}
+
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let local_uv = effect_uv(mesh.uv);
     let source_uv = remap_uv(local_uv);
-    var color = textureSample(source_texture, source_sampler, source_uv);
-    if color.a <= 0.001 {
-        discard;
-    }
+    let base_sample = textureSample(source_texture, source_sampler, source_uv);
+    let base_alpha = base_sample.a;
+    let outline_mask = outline_alpha(source_uv, base_alpha);
+    var color = base_sample;
 
-    color = palette_match(color);
-    color = color * material.base_color;
+    if base_alpha > 0.001 {
+        color = palette_match(color);
+        color = color * material.base_color;
 
-    let threshold = material.dissolve.x;
-    if material.dissolve.w > 0.5 {
-        let dissolve = dissolve_value(local_uv);
-        if dissolve < threshold {
-            discard;
+        let threshold = material.dissolve.x;
+        if material.dissolve.w > 0.5 {
+            let dissolve = dissolve_value(local_uv);
+            if dissolve < threshold {
+                discard;
+            }
+
+            let edge_width = max(material.dissolve.y, 0.0001);
+            let edge_delta = dissolve - threshold;
+            if edge_delta <= edge_width {
+                let edge_mix = 1.0 - clamp(edge_delta / edge_width, 0.0, 1.0);
+                color = vec4(
+                    mix(color.rgb, material.edge_color.rgb, edge_mix * material.edge_color.a),
+                    color.a,
+                );
+            }
         }
 
-        let edge_width = max(material.dissolve.y, 0.0001);
-        let edge_delta = dissolve - threshold;
-        if edge_delta <= edge_width {
-            let edge_mix = 1.0 - clamp(edge_delta / edge_width, 0.0, 1.0);
+        if material.silhouette.z > 0.5 {
+            let tint = clamp(material.silhouette.y, 0.0, 1.0);
             color = vec4(
-                mix(color.rgb, material.edge_color.rgb, edge_mix * material.edge_color.a),
-                color.a,
+                mix(color.rgb, material.silhouette_color.rgb, tint),
+                mix(color.a, color.a * material.silhouette_color.a, tint),
             );
         }
-    }
 
-    if material.flash.z > 0.5 {
-        let intensity = clamp(material.flash.x, 0.0, 1.0);
-        if material.flash.y > 0.5 {
-            color = vec4(
-                color.rgb + material.flash_color.rgb * intensity * (1.0 - color.rgb),
-                color.a,
-            );
-        } else {
-            color = vec4(
-                mix(color.rgb, material.flash_color.rgb, intensity),
-                color.a,
-            );
+        if material.flash.z > 0.5 {
+            let intensity = clamp(material.flash.x, 0.0, 1.0);
+            if material.flash.y > 0.5 {
+                color = vec4(
+                    color.rgb + material.flash_color.rgb * intensity * (1.0 - color.rgb),
+                    color.a,
+                );
+            } else {
+                color = vec4(
+                    mix(color.rgb, material.flash_color.rgb, intensity),
+                    color.a,
+                );
+            }
         }
+
+        return color;
     }
 
-    return color;
+    if outline_mask > 0.0 {
+        return vec4(
+            material.outline_color.rgb,
+            outline_mask * material.outline_color.a * material.base_color.a,
+        );
+    }
+
+    discard;
 }

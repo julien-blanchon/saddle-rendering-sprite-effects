@@ -3,14 +3,61 @@ use bevy::asset::RenderAssetUsages;
 use bevy::image::{ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use saddle_pane::prelude::*;
 
 use saddle_rendering_sprite_effects::{
-    DissolveConfig, DissolveEffect, DissolvePattern, FlashConfig, FlashEffect, PaletteConfig,
-    PaletteSwap, SquashStretchConfig, SquashStretchEffect,
+    DissolveConfig, DissolveEffect, DissolvePattern, FlashConfig, FlashEffect, OutlineEffect,
+    PaletteConfig, PaletteSwap, SilhouetteEffect, SpriteEffectsDiagnostics, SquashStretchConfig,
+    SquashStretchEffect,
 };
 
 #[derive(Resource)]
 struct AutoExitAfter(Timer);
+
+#[derive(Resource, Debug, Clone, PartialEq, Pane)]
+#[pane(title = "Sprite Effects", position = "top-right")]
+pub struct ExampleSpriteEffectsPane {
+    #[pane(slider, min = 0.1, max = 2.0, step = 0.05)]
+    pub flash_intensity: f32,
+    #[pane(slider, min = 0.05, max = 0.6, step = 0.01)]
+    pub flash_duration_secs: f32,
+    #[pane(slider, min = 0.1, max = 1.2, step = 0.01)]
+    pub dissolve_duration_secs: f32,
+    #[pane(slider, min = 0.0, max = 0.25, step = 0.01)]
+    pub dissolve_edge_width: f32,
+    #[pane(slider, min = 0.0, max = 4.0, step = 0.1)]
+    pub outline_width_pixels: f32,
+    #[pane(slider, min = 0.0, max = 1.0, step = 0.01)]
+    pub silhouette_tint_strength: f32,
+    #[pane(slider, min = 0.0, max = 4.0, step = 0.05)]
+    pub silhouette_sort_offset: f32,
+    #[pane(monitor)]
+    pub active_flashes: f32,
+    #[pane(monitor)]
+    pub active_dissolves: f32,
+    #[pane(monitor)]
+    pub active_outlines: f32,
+    #[pane(monitor)]
+    pub active_silhouettes: f32,
+}
+
+impl Default for ExampleSpriteEffectsPane {
+    fn default() -> Self {
+        Self {
+            flash_intensity: 1.0,
+            flash_duration_secs: 0.12,
+            dissolve_duration_secs: 0.35,
+            dissolve_edge_width: 0.08,
+            outline_width_pixels: 1.25,
+            silhouette_tint_strength: 0.8,
+            silhouette_sort_offset: 0.75,
+            active_flashes: 0.0,
+            active_dissolves: 0.0,
+            active_outlines: 0.0,
+            active_silhouettes: 0.0,
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct DemoAtlasAnimation {
@@ -36,6 +83,21 @@ pub fn install_auto_exit(app: &mut App, env_var: &str) {
         app.insert_resource(timer);
         app.add_systems(Update, auto_exit_after);
     }
+}
+
+pub fn install_pane(app: &mut App) {
+    if !app.is_plugin_added::<PanePlugin>() {
+        app.add_plugins((
+            bevy_flair::FlairPlugin,
+            bevy_input_focus::InputDispatchPlugin,
+            bevy_ui_widgets::UiWidgetsPlugins,
+            bevy_input_focus::tab_navigation::TabNavigationPlugin,
+            PanePlugin,
+        ));
+    }
+
+    app.register_pane::<ExampleSpriteEffectsPane>()
+        .add_systems(Update, (sync_example_pane, update_example_pane_monitors));
 }
 
 pub fn setup_camera(
@@ -399,6 +461,47 @@ fn auto_exit_after(
     if timer.0.tick(time.delta()).just_finished() {
         exit.write(AppExit::Success);
     }
+}
+
+fn sync_example_pane(
+    pane: Res<ExampleSpriteEffectsPane>,
+    mut flashes: Query<&mut FlashEffect>,
+    mut dissolves: Query<&mut DissolveEffect>,
+    mut outlines: Query<&mut OutlineEffect>,
+    mut silhouettes: Query<&mut SilhouetteEffect>,
+) {
+    for mut flash in &mut flashes {
+        flash.config.intensity = pane.flash_intensity.max(0.0);
+        flash.config.duration_secs = pane.flash_duration_secs.max(0.01);
+    }
+
+    for mut dissolve in &mut dissolves {
+        dissolve.config.duration_secs = pane.dissolve_duration_secs.max(0.01);
+        dissolve.config.edge_width = pane.dissolve_edge_width.max(0.0);
+    }
+
+    for mut outline in &mut outlines {
+        outline.config.width_pixels = pane.outline_width_pixels.max(0.0);
+    }
+
+    for mut silhouette in &mut silhouettes {
+        silhouette.config.tint_strength = pane.silhouette_tint_strength.clamp(0.0, 1.0);
+        silhouette.config.sort_offset = pane.silhouette_sort_offset.max(0.0);
+    }
+}
+
+fn update_example_pane_monitors(
+    diagnostics: Option<Res<SpriteEffectsDiagnostics>>,
+    mut pane: ResMut<ExampleSpriteEffectsPane>,
+) {
+    let Some(diagnostics) = diagnostics else {
+        return;
+    };
+
+    pane.active_flashes = diagnostics.active_flashes as f32;
+    pane.active_dissolves = diagnostics.active_dissolves as f32;
+    pane.active_outlines = diagnostics.active_outlines as f32;
+    pane.active_silhouettes = diagnostics.active_silhouettes as f32;
 }
 
 fn build_image(width: u32, height: u32, pixels: &[[u8; 4]]) -> Image {

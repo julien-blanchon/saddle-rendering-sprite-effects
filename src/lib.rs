@@ -15,13 +15,13 @@ mod math;
 mod systems;
 
 pub use components::{
-    DissolveEffect, FlashEffect, PaletteSwap, SpriteEffectFinished, SpriteEffectKind,
-    SquashStretchEffect,
+    DissolveEffect, FlashEffect, OutlineEffect, PaletteSwap, SilhouetteEffect,
+    SpriteEffectFinished, SpriteEffectKind, SquashStretchEffect,
 };
 pub use config::{
     DissolveCompletion, DissolveConfig, DissolveOverlap, DissolvePattern, DissolvePhase,
-    EffectTimeDomain, FlashBlendMode, FlashConfig, FlashOverlap, PaletteConfig, SquashOverlap,
-    SquashStretchConfig,
+    EffectTimeDomain, FlashBlendMode, FlashConfig, FlashOverlap, OutlineConfig, PaletteConfig,
+    SilhouetteConfig, SquashOverlap, SquashStretchConfig,
 };
 pub use diagnostics::SpriteEffectsDiagnostics;
 
@@ -108,8 +108,12 @@ impl Plugin for SpriteEffectsPlugin {
             .register_type::<FlashConfig>()
             .register_type::<FlashEffect>()
             .register_type::<FlashOverlap>()
+            .register_type::<OutlineConfig>()
+            .register_type::<OutlineEffect>()
             .register_type::<PaletteConfig>()
             .register_type::<PaletteSwap>()
+            .register_type::<SilhouetteConfig>()
+            .register_type::<SilhouetteEffect>()
             .register_type::<SpriteEffectFinished>()
             .register_type::<SpriteEffectKind>()
             .register_type::<SpriteEffectsDiagnostics>()

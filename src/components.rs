@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::config::{DissolveConfig, FlashConfig, PaletteConfig, SquashStretchConfig};
+use crate::config::{
+    DissolveConfig, FlashConfig, OutlineConfig, PaletteConfig, SilhouetteConfig,
+    SquashStretchConfig,
+};
 
 #[derive(Component, Reflect, Clone, Debug, PartialEq)]
 #[reflect(Component, Default)]
@@ -99,6 +102,58 @@ impl Default for PaletteSwap {
 impl PaletteSwap {
     #[must_use]
     pub fn new(config: PaletteConfig) -> Self {
+        Self {
+            enabled: true,
+            config,
+        }
+    }
+}
+
+#[derive(Component, Reflect, Clone, Debug, PartialEq)]
+#[reflect(Component, Default)]
+pub struct OutlineEffect {
+    pub enabled: bool,
+    pub config: OutlineConfig,
+}
+
+impl Default for OutlineEffect {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            config: OutlineConfig::default(),
+        }
+    }
+}
+
+impl OutlineEffect {
+    #[must_use]
+    pub fn new(config: OutlineConfig) -> Self {
+        Self {
+            enabled: true,
+            config,
+        }
+    }
+}
+
+#[derive(Component, Reflect, Clone, Debug, PartialEq)]
+#[reflect(Component, Default)]
+pub struct SilhouetteEffect {
+    pub enabled: bool,
+    pub config: SilhouetteConfig,
+}
+
+impl Default for SilhouetteEffect {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            config: SilhouetteConfig::default(),
+        }
+    }
+}
+
+impl SilhouetteEffect {
+    #[must_use]
+    pub fn new(config: SilhouetteConfig) -> Self {
         Self {
             enabled: true,
             config,

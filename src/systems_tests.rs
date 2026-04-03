@@ -9,9 +9,10 @@ use bevy::{
 use std::time::Duration;
 
 use crate::{
-    DissolveConfig, DissolveEffect, EffectTimeDomain, FlashConfig, FlashEffect, PaletteConfig,
-    PaletteSwap, SpriteEffectFinished, SpriteEffectKind, SpriteEffectsDiagnostics,
-    SpriteEffectsPlugin, SquashStretchConfig, SquashStretchEffect,
+    DissolveConfig, DissolveEffect, EffectTimeDomain, FlashConfig, FlashEffect, OutlineConfig,
+    OutlineEffect, PaletteConfig, PaletteSwap, SilhouetteConfig, SilhouetteEffect,
+    SpriteEffectFinished, SpriteEffectKind, SpriteEffectsDiagnostics, SpriteEffectsPlugin,
+    SquashStretchConfig, SquashStretchEffect,
 };
 
 #[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
@@ -219,6 +220,102 @@ fn palette_swap_without_texture_keeps_native_path() {
         app.world()
             .resource::<SpriteEffectsDiagnostics>()
             .active_palette_swaps,
+        1
+    );
+}
+
+#[test]
+fn outline_effect_creates_proxy_and_populates_outline_uniform() {
+    let mut app = init_app();
+    let image = {
+        let mut images = app.world_mut().resource_mut::<Assets<Image>>();
+        images.add(Image::default())
+    };
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Sprite::from_image(image),
+            OutlineEffect::new(OutlineConfig {
+                width_pixels: 2.5,
+                alpha_threshold: 0.12,
+                color: Color::srgba(0.1, 0.1, 0.1, 0.95),
+            }),
+        ))
+        .id();
+
+    advance(&mut app);
+
+    let proxy = app
+        .world()
+        .get::<crate::systems::ShaderProxy>(entity)
+        .expect("outline should create a shader proxy");
+    let materials = app
+        .world()
+        .resource::<Assets<crate::material::SpriteEffectsMaterial>>();
+    let material = materials
+        .get(&proxy.material)
+        .expect("proxy material should exist");
+
+    assert_eq!(material.uniform.outline.x, 2.5);
+    assert_eq!(material.uniform.outline.y, 0.12);
+    assert_eq!(material.uniform.outline.z, 1.0);
+    assert_eq!(
+        app.world()
+            .resource::<SpriteEffectsDiagnostics>()
+            .active_outlines,
+        1
+    );
+}
+
+#[test]
+fn silhouette_effect_updates_proxy_depth_and_uniforms() {
+    let mut app = init_app();
+    let image = {
+        let mut images = app.world_mut().resource_mut::<Assets<Image>>();
+        images.add(Image::default())
+    };
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Sprite::from_image(image),
+            SilhouetteEffect::new(SilhouetteConfig {
+                tint_strength: 0.75,
+                sort_offset: 0.6,
+                ..SilhouetteConfig::default()
+            }),
+        ))
+        .id();
+
+    advance(&mut app);
+
+    let proxy = app
+        .world()
+        .get::<crate::systems::ShaderProxy>(entity)
+        .expect("silhouette should create a shader proxy")
+        .clone();
+    let materials = app
+        .world()
+        .resource::<Assets<crate::material::SpriteEffectsMaterial>>();
+    let material = materials
+        .get(&proxy.material)
+        .expect("proxy material should exist");
+
+    assert_eq!(material.uniform.silhouette.y, 0.75);
+    assert_eq!(material.uniform.silhouette.z, 1.0);
+    assert_eq!(
+        app.world()
+            .get::<Transform>(proxy.child)
+            .expect("proxy child transform should exist")
+            .translation
+            .z,
+        0.6
+    );
+    assert_eq!(
+        app.world()
+            .resource::<SpriteEffectsDiagnostics>()
+            .active_silhouettes,
         1
     );
 }

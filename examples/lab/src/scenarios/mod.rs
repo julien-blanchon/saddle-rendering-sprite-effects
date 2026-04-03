@@ -8,7 +8,8 @@ use saddle_bevy_e2e::{
 };
 use saddle_rendering_sprite_effects::{
     DissolveCompletion, DissolveConfig, DissolveEffect, DissolvePattern, FlashConfig, FlashEffect,
-    PaletteSwap, SpriteEffectsDiagnostics, SquashStretchConfig, SquashStretchEffect,
+    OutlineConfig, OutlineEffect, PaletteSwap, SilhouetteConfig, SilhouetteEffect,
+    SpriteEffectsDiagnostics, SquashStretchConfig, SquashStretchEffect,
 };
 
 pub fn list_scenarios() -> Vec<&'static str> {
@@ -17,6 +18,7 @@ pub fn list_scenarios() -> Vec<&'static str> {
         "sprite_effects_flash",
         "sprite_effects_dissolve",
         "sprite_effects_palette_swap",
+        "sprite_effects_outline_silhouette",
         "sprite_effects_atlas_animation",
         "sprite_effects_stress",
     ]
@@ -28,6 +30,7 @@ pub fn scenario_by_name(name: &str) -> Option<Scenario> {
         "sprite_effects_flash" => Some(sprite_effects_flash()),
         "sprite_effects_dissolve" => Some(sprite_effects_dissolve()),
         "sprite_effects_palette_swap" => Some(sprite_effects_palette_swap()),
+        "sprite_effects_outline_silhouette" => Some(sprite_effects_outline_silhouette()),
         "sprite_effects_atlas_animation" => Some(sprite_effects_atlas_animation()),
         "sprite_effects_stress" => Some(sprite_effects_stress()),
         _ => None,
@@ -218,6 +221,63 @@ fn sprite_effects_atlas_animation() -> Scenario {
         .then(Action::Screenshot("sprite_effects_atlas_recovered".into()))
         .then(Action::WaitFrames(1))
         .then(assertions::log_summary("sprite_effects_atlas_animation"))
+        .build()
+}
+
+fn sprite_effects_outline_silhouette() -> Scenario {
+    Scenario::builder("sprite_effects_outline_silhouette")
+        .description(
+            "Apply an outline to one showcase actor, occlude a second actor, and verify its silhouette proxy sorts in front for readability.",
+        )
+        .then(Action::WaitFrames(10))
+        .then(Action::Custom(Box::new(|world: &mut World| {
+            let lab = *world.resource::<crate::LabEntities>();
+            world.entity_mut(lab.native_flash).insert(OutlineEffect::new(OutlineConfig {
+                color: Color::srgba(0.03, 0.04, 0.06, 0.96),
+                width_pixels: 3.0,
+                alpha_threshold: 0.05,
+            }));
+            world.entity_mut(lab.screen_flash).insert((
+                OutlineEffect::new(OutlineConfig {
+                    color: Color::srgba(1.0, 0.93, 0.84, 0.98),
+                    width_pixels: 2.0,
+                    alpha_threshold: 0.05,
+                }),
+                SilhouetteEffect::new(SilhouetteConfig {
+                    color: Color::srgba(0.16, 0.82, 1.0, 0.92),
+                    tint_strength: 1.0,
+                    alpha_threshold: 0.05,
+                    sort_offset: 1.2,
+                }),
+            ));
+            world.spawn((
+                Name::new("Silhouette Occluder"),
+                Sprite::from_color(Color::srgba(0.07, 0.09, 0.11, 0.97), Vec2::new(180.0, 160.0)),
+                Transform::from_xyz(-145.0, 180.0, 0.6),
+            ));
+        })))
+        .then(Action::WaitFrames(4))
+        .then(assertions::custom(
+            "outline and silhouette paths both activate shader proxies",
+            |world| {
+                let lab = *world.resource::<crate::LabEntities>();
+                let diagnostics = world.resource::<SpriteEffectsDiagnostics>();
+                diagnostics.active_outlines >= 2
+                    && diagnostics.active_silhouettes >= 1
+                    && support::has_proxy_child(world, lab.native_flash)
+                    && support::has_proxy_child(world, lab.screen_flash)
+            },
+        ))
+        .then(assertions::custom(
+            "silhouette proxy sorts ahead of the parent sprite",
+            |world| {
+                let lab = *world.resource::<crate::LabEntities>();
+                support::proxy_sorts_ahead_of_parent(world, lab.screen_flash)
+            },
+        ))
+        .then(Action::Screenshot("sprite_effects_outline_silhouette".into()))
+        .then(Action::WaitFrames(1))
+        .then(assertions::log_summary("sprite_effects_outline_silhouette"))
         .build()
 }
 

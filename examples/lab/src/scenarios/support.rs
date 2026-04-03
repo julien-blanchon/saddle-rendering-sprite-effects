@@ -30,6 +30,24 @@ pub fn has_proxy_child(world: &World, entity: Entity) -> bool {
     })
 }
 
+pub fn proxy_sorts_ahead_of_parent(world: &World, entity: Entity) -> bool {
+    let Some(parent_z) = world.get::<Transform>(entity).map(|transform| transform.translation.z)
+    else {
+        return false;
+    };
+
+    world.get::<Children>(entity).is_some_and(|children| {
+        children.iter().any(|child| {
+            world
+                .get::<Name>(child)
+                .is_some_and(|name| name.as_str() == "Sprite Effects Proxy")
+                && world
+                    .get::<Transform>(child)
+                    .is_some_and(|transform| transform.translation.z > parent_z)
+        })
+    })
+}
+
 pub fn is_hidden(world: &World, entity: Entity) -> bool {
     matches!(world.get::<Visibility>(entity), Some(Visibility::Hidden))
 }

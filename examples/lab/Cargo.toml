@@ -13,6 +13,7 @@ e2e = ["dep:saddle-bevy-e2e"]
 bevy = { version = "0.18", features = ["bevy_remote", "serialize"] }
 saddle-rendering-sprite-effects = { workspace = true }
 saddle-rendering-sprite-effects-example-common = { path = "../common" }
+saddle-pane = { git = "https://github.com/julien-blanchon/saddle-pane" }
 bevy_brp_extras = { version = "0.19", optional = true }
 saddle-bevy-e2e = { git = "https://github.com/julien-blanchon/saddle-bevy-e2e", features = ["json"], optional = true }
 

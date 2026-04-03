@@ -11,8 +11,8 @@ use bevy::{
 use crate::{
     SpriteEffectsRuntimeState,
     components::{
-        DissolveEffect, FlashEffect, PaletteSwap, SpriteEffectFinished, SpriteEffectKind,
-        SquashStretchEffect,
+        DissolveEffect, FlashEffect, OutlineEffect, PaletteSwap, SilhouetteEffect,
+        SpriteEffectFinished, SpriteEffectKind, SquashStretchEffect,
     },
     config::{DissolveCompletion, DissolvePattern, FlashBlendMode, FlashOverlap, SquashOverlap},
     diagnostics::SpriteEffectsDiagnostics,
@@ -384,6 +384,8 @@ pub(crate) fn sync_shader_proxies(
             Option<&DissolveEffect>,
             Option<&DissolveRuntime>,
             Option<&PaletteSwap>,
+            Option<&OutlineEffect>,
+            Option<&SilhouetteEffect>,
             Option<&ShaderProxy>,
             Option<&mut PresentedSpriteState>,
         ),
@@ -400,6 +402,8 @@ pub(crate) fn sync_shader_proxies(
         dissolve,
         dissolve_runtime,
         palette,
+        outline,
+        silhouette,
         proxy,
         presented,
     ) in &mut owners
@@ -407,9 +411,15 @@ pub(crate) fn sync_shader_proxies(
         let palette_enabled = palette
             .is_some_and(|palette| palette.enabled && palette.config.texture != Handle::default());
         let dissolve_enabled = dissolve.is_some_and(|effect| effect.enabled);
+        let outline_enabled = outline.is_some_and(|effect| effect.enabled);
+        let silhouette_enabled = silhouette.is_some_and(|effect| effect.enabled);
         let shader_flash_enabled = flash
             .is_some_and(|effect| effect.enabled && effect.config.blend == FlashBlendMode::Screen);
-        let needs_proxy = palette_enabled || dissolve_enabled || shader_flash_enabled;
+        let needs_proxy = palette_enabled
+            || dissolve_enabled
+            || shader_flash_enabled
+            || outline_enabled
+            || silhouette_enabled;
 
         if !needs_proxy {
             if let Some(proxy) = proxy {
@@ -419,6 +429,20 @@ pub(crate) fn sync_shader_proxies(
             }
             continue;
         }
+
+        let size = sprite_draw_size(&sprite, &images, &atlases);
+        let child_translation = Vec3::new(
+            -anchor.as_vec().x * size.x,
+            -anchor.as_vec().y * size.y,
+            silhouette.map_or(0.001, |effect| {
+                if effect.enabled {
+                    effect.config.sort_offset
+                } else {
+                    0.001
+                }
+            }),
+        );
+        let child_scale = Vec3::new(size.x.max(1.0), size.y.max(1.0), 1.0);
 
         let (child, material_handle) = if let Some(proxy) = proxy {
             (proxy.child, proxy.material.clone())
@@ -430,7 +454,11 @@ pub(crate) fn sync_shader_proxies(
                     ShaderProxyChild,
                     Mesh2d(internal.quad_mesh.clone()),
                     MeshMaterial2d(material_handle.clone()),
-                    Transform::from_xyz(0.0, 0.0, 0.001),
+                    Transform {
+                        translation: child_translation,
+                        scale: child_scale,
+                        ..default()
+                    },
                     Visibility::Inherited,
                 ))
                 .id();
@@ -443,13 +471,8 @@ pub(crate) fn sync_shader_proxies(
         };
 
         if let Ok(mut transform) = proxy_children.get_mut(child) {
-            let size = sprite_draw_size(&sprite, &images, &atlases);
-            transform.translation = Vec3::new(
-                -anchor.as_vec().x * size.x,
-                -anchor.as_vec().y * size.y,
-                0.001,
-            );
-            transform.scale = Vec3::new(size.x.max(1.0), size.y.max(1.0), 1.0);
+            transform.translation = child_translation;
+            transform.scale = child_scale;
         }
 
         let authored_color = sprite.color;
@@ -471,10 +494,14 @@ pub(crate) fn sync_shader_proxies(
             base_color: color_to_vec4(authored_color),
             flash_color: Vec4::ZERO,
             edge_color: Vec4::ZERO,
+            outline_color: Vec4::ZERO,
+            silhouette_color: Vec4::ZERO,
             uv_rect: Vec4::new(uv_rect.min.x, uv_rect.min.y, uv_rect.max.x, uv_rect.max.y),
             flash: Vec4::ZERO,
             dissolve: Vec4::ZERO,
             dissolve_aux: Vec4::ZERO,
+            outline: Vec4::ZERO,
+            silhouette: Vec4::ZERO,
             palette: Vec4::ZERO,
             flags: Vec4::new(
                 if sprite.flip_x { 1.0 } else { 0.0 },
@@ -543,6 +570,26 @@ pub(crate) fn sync_shader_proxies(
                 palette.config.target_row as f32,
                 palette.config.columns.max(1) as f32,
                 palette.config.epsilon.max(0.0001),
+            );
+        }
+
+        if let Some(outline) = outline.filter(|outline| outline.enabled) {
+            uniform.outline_color = color_to_vec4(outline.config.color);
+            uniform.outline = Vec4::new(
+                outline.config.width_pixels.max(0.0),
+                outline.config.alpha_threshold.clamp(0.0, 1.0),
+                1.0,
+                0.0,
+            );
+        }
+
+        if let Some(silhouette) = silhouette.filter(|silhouette| silhouette.enabled) {
+            uniform.silhouette_color = color_to_vec4(silhouette.config.color);
+            uniform.silhouette = Vec4::new(
+                silhouette.config.alpha_threshold.clamp(0.0, 1.0),
+                silhouette.config.tint_strength.clamp(0.0, 1.0),
+                1.0,
+                silhouette.config.sort_offset,
             );
         }
 
@@ -615,11 +662,15 @@ pub(crate) fn publish_diagnostics(
     dissolves: Query<&DissolveEffect>,
     squashes: Query<&SquashStretchEffect>,
     palettes: Query<&PaletteSwap>,
+    outlines: Query<&OutlineEffect>,
+    silhouettes: Query<&SilhouetteEffect>,
     proxies: Query<&ShaderProxy>,
 ) {
     diagnostics.active_flashes = flashes.iter().filter(|effect| effect.enabled).count();
     diagnostics.active_dissolves = dissolves.iter().filter(|effect| effect.enabled).count();
     diagnostics.active_squashes = squashes.iter().filter(|effect| effect.enabled).count();
     diagnostics.active_palette_swaps = palettes.iter().filter(|effect| effect.enabled).count();
+    diagnostics.active_outlines = outlines.iter().filter(|effect| effect.enabled).count();
+    diagnostics.active_silhouettes = silhouettes.iter().filter(|effect| effect.enabled).count();
     diagnostics.active_shader_proxies = proxies.iter().count();
 }

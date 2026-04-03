@@ -24,6 +24,7 @@ cargo run -p saddle-rendering-sprite-effects-lab --features e2e -- smoke_launch
 cargo run -p saddle-rendering-sprite-effects-lab --features e2e -- sprite_effects_flash
 cargo run -p saddle-rendering-sprite-effects-lab --features e2e -- sprite_effects_dissolve
 cargo run -p saddle-rendering-sprite-effects-lab --features e2e -- sprite_effects_palette_swap
+cargo run -p saddle-rendering-sprite-effects-lab --features e2e -- sprite_effects_outline_silhouette
 cargo run -p saddle-rendering-sprite-effects-lab --features e2e -- sprite_effects_atlas_animation
 cargo run -p saddle-rendering-sprite-effects-lab --features e2e -- sprite_effects_stress
 ```

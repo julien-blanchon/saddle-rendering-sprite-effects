@@ -8,6 +8,7 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()));
     app.add_plugins(SpriteEffectsPlugin::default());
+    common::install_pane(&mut app);
     install_auto_exit(&mut app, "SPRITE_EFFECTS_EXIT_AFTER_SECONDS");
     app.add_systems(Startup, setup);
     app.run();

@@ -8,6 +8,7 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()));
     app.add_plugins(SpriteEffectsPlugin::default());
+    common::install_pane(&mut app);
     install_auto_exit(&mut app, "SPRITE_EFFECTS_EXIT_AFTER_SECONDS");
     app.insert_resource(PaletteCycle {
         rows: vec![1, 2, 3],

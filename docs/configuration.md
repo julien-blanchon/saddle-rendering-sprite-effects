@@ -7,6 +7,39 @@
 | `EffectTimeDomain::GlobalScaled` | enum | default for dissolve | fixed enum | Uses `Time<Virtual>` | Use for gameplay-authored transitions that should pause or slow down with the game |
 | `EffectTimeDomain::Unscaled` | enum | default for flash and squash | fixed enum | Uses `Time<Real>` | Use for impact feedback that should ignore hitstop, pause, or slow motion |
 
+## Outline
+
+`OutlineConfig` defaults:
+
+| Field | Type | Default | Valid Range | Effect | Tuning Guidance |
+| --- | --- | --- | --- | --- | --- |
+| `color` | `Color` | `BLACK` | any color | Outline tint written around the sprite edge | Black is the safest default; bright colors work well for interactable or hostile highlighting |
+| `width_pixels` | `f32` | `1.0` | `>= 0.0` | Neighbor sampling radius in source-texture texels | `1.0..2.0` is the sweet spot for pixel art; higher values quickly read as a glow |
+| `alpha_threshold` | `f32` | `0.05` | `0.0..=1.0` | Alpha cutoff used for both source pixels and candidate outline neighbors | Raise it if soft alpha fringe is making the outline look fuzzy |
+
+### Outline Notes
+
+- Width is measured in source-texture texels, not world units or screen pixels.
+- The outline is generated from the current atlas frame bounds, so atlas animations stay frame-local.
+- Outline only draws outside the authored sprite body; it does not recolor interior opaque pixels.
+
+## Silhouette
+
+`SilhouetteConfig` defaults:
+
+| Field | Type | Default | Valid Range | Effect | Tuning Guidance |
+| --- | --- | --- | --- | --- | --- |
+| `color` | `Color` | cyan-blue with alpha | any color | Tint color applied across the sprite body | Keep some alpha when you want to preserve more of the sprite's original shading underneath |
+| `tint_strength` | `f32` | `1.0` | `0.0..=1.0` | Blend amount between source RGB and silhouette RGB | `0.35..0.65` reads well for readability/x-ray presentation; `1.0` gives a full silhouette card |
+| `alpha_threshold` | `f32` | `0.05` | `0.0..=1.0` | Alpha cutoff for which sprite pixels participate | Raise it to ignore soft edge pixels on painted sprites |
+| `sort_offset` | `f32` | `0.25` | any finite value | Local proxy Z offset relative to the authored sprite | Keep it small. Positive values push the proxy forward in a 2D sort stack; negative values can tuck it behind sibling layers |
+
+### Silhouette Notes
+
+- Silhouette only affects source pixels whose alpha exceeds the configured threshold.
+- `sort_offset` is purely a render-order nudge for the proxy child. It does not perform blocker detection by itself.
+- Silhouette composes with outline, dissolve, palette swap, and screen flash because all of them share the same proxy material path.
+
 ## Flash
 
 `FlashConfig` defaults:
