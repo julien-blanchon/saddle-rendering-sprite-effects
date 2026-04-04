@@ -1,8 +1,18 @@
-use saddle_rendering_sprite_effects_example_common as common;
+//! Sprite effects showcase — a row of sprites, each demonstrating a different effect type.
+//!
+//! Demonstrates:
+//! - `FlashEffect` with tint blend mode (red hit flash) and screen blend mode (damage flash)
+//! - `PaletteSwap` mapping source palette row 0 to target row 1
+//! - `DissolveEffect` using a radial mask texture for a reveal animation
+//! - How each effect component is attached directly to a `Sprite` entity
 
 use bevy::prelude::*;
-use common::{add_demo_assets, install_auto_exit, setup_camera, spawn_showcase_row};
-use saddle_rendering_sprite_effects::SpriteEffectsPlugin;
+use saddle_rendering_sprite_effects::{
+    DissolveConfig, DissolveEffect, DissolvePattern, FlashBlendMode, FlashConfig, FlashEffect,
+    PaletteConfig, PaletteSwap, SpriteEffectsPlugin,
+};
+use saddle_rendering_sprite_effects_example_common as common;
+use common::{add_demo_assets, install_auto_exit, setup_camera};
 
 fn main() {
     let mut app = App::new();
@@ -25,5 +35,63 @@ fn setup(
         "Hybrid sprite feedback: native tint/squash plus shader-backed dissolve and palette swap.",
     );
     let assets = add_demo_assets(&mut images, &mut atlases);
-    spawn_showcase_row(&mut commands, &assets);
+
+    // ---------------------------------------------------------------------------
+    // Effect 1: Tint flash — red color, tint blend mode, 0.22s duration
+    // ---------------------------------------------------------------------------
+    commands.spawn((
+        Name::new("Tint Flash"),
+        Sprite::from_image(assets.sprite.clone()),
+        Transform::from_xyz(-280.0, 40.0, 0.0).with_scale(Vec3::splat(6.0)),
+        FlashEffect::new(FlashConfig {
+            color: Color::srgb(1.0, 0.26, 0.26),
+            intensity: 1.0,
+            duration_secs: 0.22,
+            blend: FlashBlendMode::Tint,
+            ..FlashConfig::default()
+        }),
+    ));
+
+    // ---------------------------------------------------------------------------
+    // Effect 2: Screen flash — white damage preset using screen blend mode
+    // ---------------------------------------------------------------------------
+    commands.spawn((
+        Name::new("Screen Flash"),
+        Sprite::from_image(assets.sprite.clone()),
+        Transform::from_xyz(-90.0, 40.0, 0.0).with_scale(Vec3::splat(6.0)),
+        FlashEffect::new(FlashConfig::damage()),
+    ));
+
+    // ---------------------------------------------------------------------------
+    // Effect 3: Palette swap — 4-column palette texture, row 0 -> row 1
+    // ---------------------------------------------------------------------------
+    commands.spawn((
+        Name::new("Palette Swap"),
+        Sprite::from_image(assets.sprite.clone()),
+        Transform::from_xyz(100.0, 40.0, 0.0).with_scale(Vec3::splat(6.0)),
+        PaletteSwap::new(PaletteConfig {
+            texture: assets.palette.clone(),
+            columns: 4,
+            source_row: 0,
+            target_row: 1,
+            epsilon: 0.01,
+            preserve_alpha: true,
+            enforce_nearest_sampling: true,
+        }),
+    ));
+
+    // ---------------------------------------------------------------------------
+    // Effect 4: Dissolve reveal — radial mask pattern, 0.8s duration
+    // ---------------------------------------------------------------------------
+    commands.spawn((
+        Name::new("Dissolve"),
+        Sprite::from_image(assets.sprite.clone()),
+        Transform::from_xyz(290.0, 40.0, 0.0).with_scale(Vec3::splat(6.0)),
+        DissolveEffect::new(DissolveConfig {
+            duration_secs: 0.8,
+            pattern: DissolvePattern::Mask,
+            mask_texture: Some(assets.mask.clone()),
+            ..DissolveConfig::reveal()
+        }),
+    ));
 }
