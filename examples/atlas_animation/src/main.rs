@@ -2,11 +2,13 @@ use saddle_rendering_sprite_effects_example_common as common;
 
 use bevy::prelude::*;
 use common::{
-    add_demo_assets, animate_atlas_sprites, install_auto_exit, setup_camera, spawn_animated_sprite,
+    add_demo_assets, animate_atlas_sprites, install_auto_exit, setup_camera,
+    showcase_hide_dissolve_config, showcase_reveal_dissolve_config, showcase_screen_flash_config,
+    spawn_animated_sprite,
 };
 use saddle_rendering_sprite_effects::{
-    DissolveConfig, DissolveEffect, DissolvePattern, FlashConfig, FlashEffect, PaletteConfig,
-    PaletteSwap, SpriteEffectsPlugin,
+    DissolveConfig, DissolveEffect, DissolvePattern, FlashEffect, PaletteConfig, PaletteSwap,
+    SpriteEffectsPlugin,
 };
 
 #[derive(Resource)]
@@ -51,7 +53,7 @@ fn setup(
             pattern: DissolvePattern::Noise,
             phase: saddle_rendering_sprite_effects::DissolvePhase::Reveal,
             duration_secs: 0.65,
-            ..DissolveConfig::default()
+            ..showcase_reveal_dissolve_config()
         }));
 }
 
@@ -67,11 +69,11 @@ fn cycle_effects(
 
     for entity in &query {
         commands.entity(entity).insert((
-            FlashEffect::new(FlashConfig::damage()),
+            FlashEffect::new(showcase_screen_flash_config()),
             DissolveEffect::new(DissolveConfig {
                 pattern: DissolvePattern::Noise,
                 duration_secs: 0.52,
-                ..DissolveConfig::hide()
+                ..showcase_hide_dissolve_config()
             }),
         ));
     }

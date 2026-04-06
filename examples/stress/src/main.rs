@@ -2,11 +2,13 @@ use saddle_rendering_sprite_effects_example_common as common;
 
 use bevy::prelude::*;
 use common::{
-    add_demo_assets, animate_atlas_sprites, install_auto_exit, setup_camera, spawn_animated_sprite,
+    add_demo_assets, animate_atlas_sprites, install_auto_exit, setup_camera,
+    showcase_grounded_squash_config, showcase_hide_dissolve_config, showcase_screen_flash_config,
+    spawn_animated_sprite,
 };
 use saddle_rendering_sprite_effects::{
-    DissolveConfig, DissolveEffect, FlashConfig, FlashEffect, PaletteConfig, PaletteSwap,
-    SpriteEffectsPlugin, SquashStretchConfig, SquashStretchEffect,
+    DissolveConfig, DissolveEffect, FlashEffect, PaletteConfig, PaletteSwap, SpriteEffectsPlugin,
+    SquashStretchEffect,
 };
 
 #[derive(Resource)]
@@ -67,19 +69,19 @@ fn pulse_room(
         if index % 3 == 0 {
             commands
                 .entity(entity)
-                .insert(FlashEffect::new(FlashConfig::damage()));
+                .insert(FlashEffect::new(showcase_screen_flash_config()));
         }
         if index % 4 == 0 {
             commands
                 .entity(entity)
-                .insert(SquashStretchEffect::new(SquashStretchConfig::landing()));
+                .insert(SquashStretchEffect::new(showcase_grounded_squash_config()));
         }
         if index % 6 == 0 {
             commands
                 .entity(entity)
                 .insert(DissolveEffect::new(DissolveConfig {
                     duration_secs: 0.38,
-                    ..DissolveConfig::hide()
+                    ..showcase_hide_dissolve_config()
                 }));
         }
     }

@@ -170,5 +170,9 @@ impl Plugin for SpriteEffectsPlugin {
 mod math_tests;
 
 #[cfg(test)]
+#[path = "config_tests.rs"]
+mod config_tests;
+
+#[cfg(test)]
 #[path = "systems_tests.rs"]
 mod systems_tests;

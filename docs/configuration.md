@@ -1,5 +1,7 @@
 # `saddle-rendering-sprite-effects` Configuration
 
+Core defaults are intentionally neutral. If you want more stylized or game-specific recipes, compose them in your app or example layer instead of relying on semantic presets in the crate API.
+
 ## Time Domain
 
 | Parameter | Type | Default | Valid Range | Effect | Tuning Guidance |
@@ -29,10 +31,10 @@
 
 | Field | Type | Default | Valid Range | Effect | Tuning Guidance |
 | --- | --- | --- | --- | --- | --- |
-| `color` | `Color` | cyan-blue with alpha | any color | Tint color applied across the sprite body | Keep some alpha when you want to preserve more of the sprite's original shading underneath |
+| `color` | `Color` | `WHITE` | any color | Tint color applied across the sprite body | Neutral white is the least opinionated baseline; use hue plus alpha when you want a more stylized readability pass |
 | `tint_strength` | `f32` | `1.0` | `0.0..=1.0` | Blend amount between source RGB and silhouette RGB | `0.35..0.65` reads well for readability/x-ray presentation; `1.0` gives a full silhouette card |
 | `alpha_threshold` | `f32` | `0.05` | `0.0..=1.0` | Alpha cutoff for which sprite pixels participate | Raise it to ignore soft edge pixels on painted sprites |
-| `sort_offset` | `f32` | `0.25` | any finite value | Local proxy Z offset relative to the authored sprite | Keep it small. Positive values push the proxy forward in a 2D sort stack; negative values can tuck it behind sibling layers |
+| `sort_offset` | `f32` | `0.0` | any finite value | Local proxy Z offset relative to the authored sprite | Leave it at `0.0` when you do not want the proxy to bias sorting; use small positive or negative values only when you need deliberate layering |
 
 ### Silhouette Notes
 
@@ -46,13 +48,13 @@
 
 | Field | Type | Default | Valid Range | Effect | Tuning Guidance |
 | --- | --- | --- | --- | --- | --- |
-| `color` | `Color` | `WHITE` | any color | Flash tint or screen color | White is strongest for hit confirmation; colored flashes read better for elemental/status feedback |
-| `intensity` | `f32` | `1.0` | `0.0..=1.0` recommended | Blend amount | `0.35..0.6` is usually enough for pickups or buffs; reserve `1.0` for strong hits |
-| `duration_secs` | `f32` | `0.12` | `> 0.0` | Lifetime of the flash | `0.08..0.16` reads as punchy; longer flashes start to feel like status recolor instead of impact |
+| `color` | `Color` | `WHITE` | any color | Flash tint or screen color | White is the highest-contrast baseline; colored flashes are useful when you want a themed accent instead of neutral emphasis |
+| `intensity` | `f32` | `1.0` | `0.0..=1.0` recommended | Blend amount | `0.35..0.6` is usually enough for light emphasis; reserve `1.0` for very strong flashes |
+| `duration_secs` | `f32` | `0.12` | `> 0.0` | Lifetime of the flash | `0.08..0.16` reads as punchy; longer flashes start to feel like a temporary recolor |
 | `easing` | `EaseFunction` | `SineOut` | standard Bevy easing enum | Controls fade-out weight | `SineOut` and `CubicOut` give readable snap without an abrupt cutoff |
 | `blend` | `FlashBlendMode` | `Tint` | `Tint` or `Screen` | Native tint path or proxy-backed screen flash | Use `Tint` when you want the cheapest path; use `Screen` when you want additive-style punch |
 | `overlap` | `FlashOverlap` | `Refresh` | enum | Restart policy when reauthored | Both current variants restart immediately; keep `Refresh` unless you need to signal stronger semantic intent in your own code |
-| `time_domain` | `EffectTimeDomain` | `Unscaled` | enum | Scaled vs real-time lifetime | Keep hit flashes unscaled unless you intentionally want them frozen by hitstop |
+| `time_domain` | `EffectTimeDomain` | `Unscaled` | enum | Scaled vs real-time lifetime | Keep short feedback flashes unscaled unless you intentionally want them frozen by hitstop |
 
 ## Dissolve
 
@@ -60,17 +62,17 @@
 
 | Field | Type | Default | Valid Range | Effect | Tuning Guidance |
 | --- | --- | --- | --- | --- | --- |
-| `duration_secs` | `f32` | `0.35` | `> 0.0` | Total dissolve or reveal lifetime | `0.25..0.45` works for deaths and summons; slower transitions start reading as teleports or cinematic wipes |
+| `duration_secs` | `f32` | `0.35` | `> 0.0` | Total dissolve or reveal lifetime | `0.25..0.45` works for brisk transitions; slower values start reading as wipes or cinematic reveals |
 | `easing` | `EaseFunction` | `SineInOut` | standard easing enum | Threshold progression curve | Use `SineInOut` or `SmoothStep` for neutral transitions; use `CubicIn` for aggressive disappearances |
 | `pattern` | `DissolvePattern` | `Noise` | enum | Threshold field used for discard | `Noise` is the most general-purpose; directional modes work better for wipes or stealth reveals |
 | `phase` | `DissolvePhase` | `Hide` | `Hide` or `Reveal` | Whether threshold moves toward disappearance or appearance | Use `Reveal` for spawns, teleport arrivals, or stealth decloak |
 | `overlap` | `DissolveOverlap` | `Replace` | enum | Restart policy | Current behavior restarts the authored dissolve immediately |
 | `time_domain` | `EffectTimeDomain` | `GlobalScaled` | enum | Scaled vs real-time lifetime | Keep cinematic or gameplay-state transitions scaled by default |
-| `edge_width` | `f32` | `0.08` | `0.0..=1.0` practical | Width of the glowing edge band | `0.03..0.10` is readable; wide values feel like burn-away or magic fog instead of a sharp dissolve edge |
-| `edge_color` | `Color` | warm orange | any color | Edge tint mixed onto the dissolve frontier | Use alpha on the color to control how strongly the edge overrides the sprite |
+| `edge_width` | `f32` | `0.0` | `0.0..=1.0` practical | Width of the dissolve frontier band | Keep it at `0.0` for a plain dissolve; `0.03..0.10` adds a readable edge without turning into a soft glow |
+| `edge_color` | `Color` | transparent white | any color | Edge tint mixed onto the dissolve frontier | Increase alpha to make the frontier visible; choose the hue only after you know what kind of stylization you want |
 | `noise_scale` | `Vec2` | `Vec2::splat(24.0)` | positive values | Frequency used by the procedural noise pattern | Higher values give finer grain; lower values give chunkier breakup |
 | `mask_texture` | `Option<Handle<Image>>` | `None` | any grayscale-compatible image | Optional authored dissolve mask | Only used when `pattern = Mask`; author masks in sprite-local UV space |
-| `completion` | `DissolveCompletion` | `RestoreVisible` | enum | Post-effect cleanup behavior | Use `HideEntity` for temporary disappearances and `DespawnEntity` for death cleanup |
+| `completion` | `DissolveCompletion` | `RestoreVisible` | enum | Post-effect cleanup behavior | Use `HideEntity` for temporary disappearances and `DespawnEntity` when the effect owns the entity lifetime |
 
 ### Dissolve Completion
 
@@ -86,15 +88,15 @@
 
 | Field | Type | Default | Valid Range | Effect | Tuning Guidance |
 | --- | --- | --- | --- | --- | --- |
-| `amplitude` | `f32` | `0.22` | `0.0..=1.0` practical | Primary squash amount | `0.12..0.25` reads well for landings; recoil usually wants slightly less |
+| `amplitude` | `f32` | `0.22` | `0.0..=1.0` practical | Primary squash amount | `0.12..0.25` is a good responsive range before the deformation starts reading as very cartoony |
 | `rebound` | `f32` | `0.34` | `0.0..=1.0` practical | Stretch rebound after the initial squash | `0.15..0.35` feels natural; higher values become cartoony quickly |
-| `axis_bias` | `Vec2` | `Vec2::Y` | any non-zero vector recommended | Which axis receives the primary squash/stretch | `Vec2::Y` is good for landings; use the fire direction for muzzle or recoil reactions |
+| `axis_bias` | `Vec2` | `Vec2::Y` | any non-zero vector recommended | Which axis receives the primary squash/stretch | `Vec2::Y` is a neutral baseline for upright sprites; switch to another axis when you want the deformation to read along motion or impact direction |
 | `preserve_area` | `bool` | `true` | boolean | Whether the cross-axis compensates to preserve apparent volume | Keep enabled for characters and props; disable for intentionally “puffed” or “squeezed” stylization |
-| `compensation_anchor` | `Option<Anchor>` | `Some(BOTTOM_CENTER)` | any Bevy anchor or `None` | Translation compensation target | Bottom-centered compensation is best for feet-on-ground characters; set `None` for free-floating recoil |
+| `compensation_anchor` | `Option<Anchor>` | `None` | any Bevy anchor or `None` | Translation compensation target | Leave it `None` for an unanchored envelope; set a specific anchor only when the deformation must stay planted against a visual base |
 | `duration_secs` | `f32` | `0.20` | `> 0.0` | Total envelope duration | `0.12..0.24` is the useful range for responsive feedback |
 | `easing` | `EaseFunction` | `SineOut` | standard easing enum | Envelope shape | `SineOut` gives soft recovery; `CubicOut` reads snappier |
 | `overlap` | `SquashOverlap` | `Refresh` | enum | Restart policy | Current behavior restarts immediately |
-| `time_domain` | `EffectTimeDomain` | `Unscaled` | enum | Scaled vs real-time lifetime | Keep landing and impact feedback unscaled when using hitstop |
+| `time_domain` | `EffectTimeDomain` | `Unscaled` | enum | Scaled vs real-time lifetime | Keep short deformation feedback unscaled when using hitstop |
 
 ### Area Preservation
 
@@ -104,7 +106,7 @@
 ### Anchor Compensation
 
 - Compensation is based on the difference between the sprite's current `Anchor` and `compensation_anchor`.
-- This keeps bottom-anchored landings planted while still allowing free-floating effects to skip translation offsets entirely.
+- Use it when you need the deformation to stay planted against a particular edge; leave it unset for free-floating squash/stretch.
 
 ## Palette Swap
 

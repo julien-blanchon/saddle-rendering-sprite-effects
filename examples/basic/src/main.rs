@@ -1,18 +1,21 @@
 //! Sprite effects showcase — a row of sprites, each demonstrating a different effect type.
 //!
 //! Demonstrates:
-//! - `FlashEffect` with tint blend mode (red hit flash) and screen blend mode (damage flash)
+//! - `FlashEffect` with tint blend mode and a screen-style showcase flash preset
 //! - `PaletteSwap` mapping source palette row 0 to target row 1
 //! - `DissolveEffect` using a radial mask texture for a reveal animation
 //! - How each effect component is attached directly to a `Sprite` entity
 
 use bevy::prelude::*;
+use common::{
+    add_demo_assets, install_auto_exit, setup_camera, showcase_reveal_dissolve_config,
+    showcase_screen_flash_config,
+};
 use saddle_rendering_sprite_effects::{
     DissolveConfig, DissolveEffect, DissolvePattern, FlashBlendMode, FlashConfig, FlashEffect,
     PaletteConfig, PaletteSwap, SpriteEffectsPlugin,
 };
 use saddle_rendering_sprite_effects_example_common as common;
-use common::{add_demo_assets, install_auto_exit, setup_camera};
 
 fn main() {
     let mut app = App::new();
@@ -53,13 +56,13 @@ fn setup(
     ));
 
     // ---------------------------------------------------------------------------
-    // Effect 2: Screen flash — white damage preset using screen blend mode
+    // Effect 2: Screen flash — showcase preset using screen blend mode
     // ---------------------------------------------------------------------------
     commands.spawn((
         Name::new("Screen Flash"),
         Sprite::from_image(assets.sprite.clone()),
         Transform::from_xyz(-90.0, 40.0, 0.0).with_scale(Vec3::splat(6.0)),
-        FlashEffect::new(FlashConfig::damage()),
+        FlashEffect::new(showcase_screen_flash_config()),
     ));
 
     // ---------------------------------------------------------------------------
@@ -91,7 +94,7 @@ fn setup(
             duration_secs: 0.8,
             pattern: DissolvePattern::Mask,
             mask_texture: Some(assets.mask.clone()),
-            ..DissolveConfig::reveal()
+            ..showcase_reveal_dissolve_config()
         }),
     ));
 }

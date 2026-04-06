@@ -9,11 +9,11 @@ saddle-rendering-sprite-effects = { git = "https://github.com/julien-blanchon/sa
 ```
 
 ```rust,no_run
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::Anchor};
 use saddle_rendering_sprite_effects::{
-    DissolveConfig, DissolveEffect, FlashConfig, FlashEffect, OutlineConfig, OutlineEffect,
-    PaletteConfig, PaletteSwap, SilhouetteConfig, SilhouetteEffect, SpriteEffectsPlugin,
-    SquashStretchConfig, SquashStretchEffect,
+    DissolveConfig, DissolveEffect, DissolvePhase, FlashBlendMode, FlashConfig, FlashEffect,
+    OutlineConfig, OutlineEffect, PaletteConfig, PaletteSwap, SilhouetteConfig,
+    SilhouetteEffect, SpriteEffectsPlugin, SquashStretchConfig, SquashStretchEffect,
 };
 
 fn main() {
@@ -31,17 +31,36 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Name::new("Effect Target"),
         Sprite::from_image(sprite),
-        FlashEffect::new(FlashConfig::damage()),
-        SquashStretchEffect::new(SquashStretchConfig::landing()),
+        FlashEffect::new(FlashConfig {
+            blend: FlashBlendMode::Screen,
+            duration_secs: 0.10,
+            ..FlashConfig::default()
+        }),
+        SquashStretchEffect::new(SquashStretchConfig {
+            axis_bias: Vec2::Y,
+            compensation_anchor: Some(Anchor::BOTTOM_CENTER),
+            ..SquashStretchConfig::default()
+        }),
         PaletteSwap::new(PaletteConfig::new(palette, 4)),
         OutlineEffect::new(OutlineConfig::default()),
-        SilhouetteEffect::new(SilhouetteConfig::default()),
-        DissolveEffect::new(DissolveConfig::reveal()),
+        SilhouetteEffect::new(SilhouetteConfig {
+            color: Color::srgba(0.18, 0.82, 1.0, 0.88),
+            sort_offset: 0.25,
+            ..SilhouetteConfig::default()
+        }),
+        DissolveEffect::new(DissolveConfig {
+            phase: DissolvePhase::Reveal,
+            edge_width: 0.08,
+            edge_color: Color::srgb(1.0, 0.68, 0.2),
+            ..DissolveConfig::default()
+        }),
     ));
 }
 ```
 
 Add, remove, or mutate the public effect components directly. Each channel owns its own lifetime and cleans up the temporary runtime state it created.
+
+Core defaults stay intentionally neutral. If you want game- or demo-specific recipes, compose them in your app code or keep them in an example/helper layer rather than relying on gameplay-named constructors in the crate API.
 
 ## Plugin Constructor
 

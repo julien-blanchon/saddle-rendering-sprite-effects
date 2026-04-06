@@ -1,10 +1,12 @@
 use saddle_rendering_sprite_effects_example_common as common;
 
 use bevy::prelude::*;
-use common::{add_demo_assets, install_auto_exit, setup_camera};
+use common::{
+    add_demo_assets, install_auto_exit, setup_camera, showcase_grounded_squash_config,
+    showcase_screen_flash_config,
+};
 use saddle_rendering_sprite_effects::{
-    FlashBlendMode, FlashConfig, FlashEffect, SpriteEffectsPlugin, SquashStretchConfig,
-    SquashStretchEffect,
+    FlashBlendMode, FlashConfig, FlashEffect, SpriteEffectsPlugin, SquashStretchEffect,
 };
 
 #[derive(Resource)]
@@ -70,8 +72,8 @@ fn cycle_flash(
             }
             "Screen Flash Sprite" => {
                 commands.entity(entity).insert((
-                    FlashEffect::new(FlashConfig::damage()),
-                    SquashStretchEffect::new(SquashStretchConfig::landing()),
+                    FlashEffect::new(showcase_screen_flash_config()),
+                    SquashStretchEffect::new(showcase_grounded_squash_config()),
                 ));
             }
             _ => {}

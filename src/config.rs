@@ -91,10 +91,10 @@ pub struct SilhouetteConfig {
 impl Default for SilhouetteConfig {
     fn default() -> Self {
         Self {
-            color: Color::srgba(0.18, 0.82, 1.0, 0.88),
+            color: Color::WHITE,
             tint_strength: 1.0,
             alpha_threshold: 0.05,
-            sort_offset: 0.25,
+            sort_offset: 0.0,
         }
     }
 }
@@ -118,21 +118,6 @@ impl Default for FlashConfig {
             duration_secs: 0.12,
             easing: EaseFunction::SineOut,
             blend: FlashBlendMode::Tint,
-            overlap: FlashOverlap::Refresh,
-            time_domain: EffectTimeDomain::Unscaled,
-        }
-    }
-}
-
-impl FlashConfig {
-    #[must_use]
-    pub fn damage() -> Self {
-        Self {
-            color: Color::WHITE,
-            intensity: 1.0,
-            duration_secs: 0.10,
-            easing: EaseFunction::SineOut,
-            blend: FlashBlendMode::Screen,
             overlap: FlashOverlap::Refresh,
             time_domain: EffectTimeDomain::Unscaled,
         }
@@ -163,8 +148,8 @@ impl Default for DissolveConfig {
             phase: DissolvePhase::Hide,
             overlap: DissolveOverlap::Replace,
             time_domain: EffectTimeDomain::GlobalScaled,
-            edge_width: 0.08,
-            edge_color: Color::srgb(1.0, 0.68, 0.2),
+            edge_width: 0.0,
+            edge_color: Color::srgba(1.0, 1.0, 1.0, 0.0),
             noise_scale: Vec2::splat(24.0),
             mask_texture: None,
             completion: DissolveCompletion::RestoreVisible,
@@ -207,30 +192,11 @@ impl Default for SquashStretchConfig {
             rebound: 0.34,
             axis_bias: Vec2::Y,
             preserve_area: true,
-            compensation_anchor: Some(Anchor::BOTTOM_CENTER),
+            compensation_anchor: None,
             duration_secs: 0.20,
             easing: EaseFunction::SineOut,
             overlap: SquashOverlap::Refresh,
             time_domain: EffectTimeDomain::Unscaled,
-        }
-    }
-}
-
-impl SquashStretchConfig {
-    #[must_use]
-    pub fn landing() -> Self {
-        Self::default()
-    }
-
-    #[must_use]
-    pub fn recoil(direction: Vec2) -> Self {
-        Self {
-            axis_bias: direction,
-            compensation_anchor: None,
-            amplitude: 0.18,
-            rebound: 0.18,
-            duration_secs: 0.16,
-            ..Self::default()
         }
     }
 }

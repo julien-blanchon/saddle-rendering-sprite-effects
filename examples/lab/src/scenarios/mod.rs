@@ -9,7 +9,10 @@ use saddle_bevy_e2e::{
 use saddle_rendering_sprite_effects::{
     DissolveCompletion, DissolveConfig, DissolveEffect, DissolvePattern, FlashConfig, FlashEffect,
     OutlineConfig, OutlineEffect, PaletteSwap, SilhouetteConfig, SilhouetteEffect,
-    SpriteEffectsDiagnostics, SquashStretchConfig, SquashStretchEffect,
+    SpriteEffectsDiagnostics, SquashStretchEffect,
+};
+use saddle_rendering_sprite_effects_example_common::{
+    showcase_grounded_squash_config, showcase_hide_dissolve_config, showcase_screen_flash_config,
 };
 
 pub fn list_scenarios() -> Vec<&'static str> {
@@ -82,8 +85,8 @@ fn sprite_effects_flash() -> Scenario {
                 ..FlashConfig::default()
             }));
             world.entity_mut(lab.screen_flash).insert((
-                FlashEffect::new(FlashConfig::damage()),
-                SquashStretchEffect::new(SquashStretchConfig::landing()),
+                FlashEffect::new(showcase_screen_flash_config()),
+                SquashStretchEffect::new(showcase_grounded_squash_config()),
             ));
         })))
         .then(Action::WaitFrames(2))
@@ -128,7 +131,7 @@ fn sprite_effects_dissolve() -> Scenario {
                     pattern: DissolvePattern::Mask,
                     mask_texture: Some(assets.mask),
                     completion: DissolveCompletion::HideEntity,
-                    ..DissolveConfig::hide()
+                    ..showcase_hide_dissolve_config()
                 }));
         })))
         .then(Action::WaitFrames(8))
@@ -189,10 +192,10 @@ fn sprite_effects_atlas_animation() -> Scenario {
         .then(Action::Custom(Box::new(|world: &mut World| {
             let lab = *world.resource::<crate::LabEntities>();
             world.entity_mut(lab.atlas_target).insert((
-                FlashEffect::new(FlashConfig::damage()),
+                FlashEffect::new(showcase_screen_flash_config()),
                 DissolveEffect::new(DissolveConfig {
                     duration_secs: 0.28,
-                    ..DissolveConfig::hide()
+                    ..showcase_hide_dissolve_config()
                 }),
             ));
         })))
@@ -296,18 +299,18 @@ fn sprite_effects_stress() -> Scenario {
                 if index % 3 == 0 {
                     world
                         .entity_mut(entity)
-                        .insert(FlashEffect::new(FlashConfig::damage()));
+                        .insert(FlashEffect::new(showcase_screen_flash_config()));
                 }
                 if index % 4 == 0 {
                     world
                         .entity_mut(entity)
-                        .insert(SquashStretchEffect::new(SquashStretchConfig::landing()));
+                        .insert(SquashStretchEffect::new(showcase_grounded_squash_config()));
                 }
                 if index % 6 == 0 {
                     world.entity_mut(entity).insert(DissolveEffect::new(DissolveConfig {
                         duration_secs: 0.24,
                         completion: DissolveCompletion::RestoreVisible,
-                        ..DissolveConfig::hide()
+                        ..showcase_hide_dissolve_config()
                     }));
                 }
             }

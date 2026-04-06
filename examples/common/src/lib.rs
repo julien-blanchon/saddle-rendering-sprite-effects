@@ -3,12 +3,13 @@ use bevy::asset::RenderAssetUsages;
 use bevy::image::{ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::sprite::Anchor;
 use saddle_pane::prelude::*;
 
 use saddle_rendering_sprite_effects::{
-    DissolveConfig, DissolveEffect, DissolvePattern, FlashConfig, FlashEffect, OutlineEffect,
-    PaletteConfig, PaletteSwap, SilhouetteEffect, SpriteEffectsDiagnostics, SquashStretchConfig,
-    SquashStretchEffect,
+    DissolveConfig, DissolveEffect, DissolvePattern, DissolvePhase, FlashBlendMode, FlashConfig,
+    FlashEffect, OutlineEffect, PaletteConfig, PaletteSwap, SilhouetteConfig, SilhouetteEffect,
+    SpriteEffectsDiagnostics, SquashStretchConfig, SquashStretchEffect,
 };
 
 #[derive(Resource)]
@@ -71,6 +72,62 @@ pub struct PaletteCycle {
     pub rows: Vec<u32>,
     pub timer: Timer,
     pub index: usize,
+}
+
+pub fn showcase_screen_flash_config() -> FlashConfig {
+    FlashConfig {
+        color: Color::WHITE,
+        intensity: 1.0,
+        duration_secs: 0.10,
+        blend: FlashBlendMode::Screen,
+        ..FlashConfig::default()
+    }
+}
+
+pub fn showcase_grounded_squash_config() -> SquashStretchConfig {
+    SquashStretchConfig {
+        compensation_anchor: Some(Anchor::BOTTOM_CENTER),
+        ..SquashStretchConfig::default()
+    }
+}
+
+pub fn showcase_directional_squash_config(direction: Vec2) -> SquashStretchConfig {
+    SquashStretchConfig {
+        axis_bias: direction,
+        compensation_anchor: None,
+        amplitude: 0.18,
+        rebound: 0.18,
+        duration_secs: 0.16,
+        ..SquashStretchConfig::default()
+    }
+}
+
+pub fn showcase_dissolve_config() -> DissolveConfig {
+    DissolveConfig {
+        edge_width: 0.08,
+        edge_color: Color::srgb(1.0, 0.68, 0.2),
+        ..DissolveConfig::default()
+    }
+}
+
+pub fn showcase_reveal_dissolve_config() -> DissolveConfig {
+    DissolveConfig {
+        phase: DissolvePhase::Reveal,
+        ..showcase_dissolve_config()
+    }
+}
+
+pub fn showcase_hide_dissolve_config() -> DissolveConfig {
+    showcase_dissolve_config()
+}
+
+pub fn showcase_silhouette_config() -> SilhouetteConfig {
+    SilhouetteConfig {
+        color: Color::srgba(0.18, 0.82, 1.0, 0.88),
+        tint_strength: 1.0,
+        alpha_threshold: 0.05,
+        sort_offset: 0.25,
+    }
 }
 
 pub fn install_auto_exit(app: &mut App, env_var: &str) {
@@ -197,7 +254,7 @@ pub fn spawn_showcase_row(commands: &mut Commands, assets: &DemoAssets) {
         Name::new("Screen Flash"),
         Sprite::from_image(assets.sprite.clone()),
         Transform::from_xyz(-90.0, 40.0, 0.0).with_scale(Vec3::splat(6.0)),
-        FlashEffect::new(FlashConfig::damage()),
+        FlashEffect::new(showcase_screen_flash_config()),
     ));
 
     commands.spawn((
@@ -221,7 +278,7 @@ pub fn spawn_showcase_row(commands: &mut Commands, assets: &DemoAssets) {
             duration_secs: 0.8,
             pattern: DissolvePattern::Mask,
             mask_texture: Some(assets.mask.clone()),
-            ..DissolveConfig::reveal()
+            ..showcase_reveal_dissolve_config()
         }),
     ));
 }
@@ -308,7 +365,7 @@ pub fn pulse_effects(
         if flash.is_none() {
             commands
                 .entity(entity)
-                .insert(FlashEffect::new(FlashConfig::damage()));
+                .insert(FlashEffect::new(showcase_screen_flash_config()));
         }
         if dissolve.is_none() {
             commands
@@ -316,13 +373,13 @@ pub fn pulse_effects(
                 .insert(DissolveEffect::new(DissolveConfig {
                     duration_secs: 0.42,
                     pattern: DissolvePattern::Noise,
-                    ..DissolveConfig::hide()
+                    ..showcase_hide_dissolve_config()
                 }));
         }
         if squash.is_none() {
             commands
                 .entity(entity)
-                .insert(SquashStretchEffect::new(SquashStretchConfig::landing()));
+                .insert(SquashStretchEffect::new(showcase_grounded_squash_config()));
         }
     }
 }

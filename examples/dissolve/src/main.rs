@@ -1,7 +1,10 @@
 use saddle_rendering_sprite_effects_example_common as common;
 
 use bevy::prelude::*;
-use common::{add_demo_assets, install_auto_exit, setup_camera};
+use common::{
+    add_demo_assets, install_auto_exit, setup_camera, showcase_hide_dissolve_config,
+    showcase_reveal_dissolve_config,
+};
 use saddle_rendering_sprite_effects::{
     DissolveConfig, DissolveEffect, DissolvePattern, SpriteEffectsPlugin,
 };
@@ -55,7 +58,7 @@ fn setup(
             pattern: DissolvePattern::Mask,
             mask_texture: Some(assets.mask),
             duration_secs: 0.6,
-            ..DissolveConfig::default()
+            ..showcase_reveal_dissolve_config()
         }),
     ));
 }
@@ -75,12 +78,12 @@ fn trigger_dissolves(
             "Noise Dissolve" => Some(DissolveEffect::new(DissolveConfig {
                 pattern: DissolvePattern::Noise,
                 duration_secs: 0.55,
-                ..DissolveConfig::hide()
+                ..showcase_hide_dissolve_config()
             })),
             "Radial Dissolve" => Some(DissolveEffect::new(DissolveConfig {
                 pattern: DissolvePattern::RadialOut,
                 duration_secs: 0.55,
-                ..DissolveConfig::hide()
+                ..showcase_hide_dissolve_config()
             })),
             _ => None,
         };

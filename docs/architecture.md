@@ -21,6 +21,8 @@ Why this split:
 - projects that only need hit flash and squash do not pay for a material-backed path
 - projects that do need shader effects still trigger them through the same authored component surface
 
+The crate keeps those authored components low-level and parameter-driven. Gameplay- or demo-specific recipes belong in host code or example helpers, not in the core config API.
+
 ## Runtime Flow
 
 `SpriteEffectsSystems` are ordered as:
@@ -125,7 +127,7 @@ The crate intentionally separates scaled and unscaled time:
 - `EffectTimeDomain::GlobalScaled` uses `Time<Virtual>`
 - `EffectTimeDomain::Unscaled` uses `Time<Real>`
 
-This makes it valid to keep hit flashes or landing squash alive through pause/hitstop while allowing dissolves to respect game-time scaling.
+This makes it valid to keep short flashes or squash/stretch envelopes alive through pause/hitstop while allowing dissolves to respect game-time scaling.
 
 ## Performance Model
 

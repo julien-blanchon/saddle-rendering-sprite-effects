@@ -10,11 +10,15 @@ use std::fmt::Write as _;
 use bevy::prelude::*;
 #[cfg(feature = "dev")]
 use bevy_brp_extras::BrpExtrasPlugin;
-use common::{add_demo_assets, animate_atlas_sprites, install_auto_exit, spawn_animated_sprite};
+use common::{
+    add_demo_assets, animate_atlas_sprites, install_auto_exit, showcase_dissolve_config,
+    showcase_grounded_squash_config, showcase_hide_dissolve_config, showcase_screen_flash_config,
+    spawn_animated_sprite,
+};
 use saddle_rendering_sprite_effects::{
     DissolveCompletion, DissolveConfig, DissolveEffect, DissolvePattern, DissolvePhase,
     FlashConfig, FlashEffect, PaletteConfig, PaletteSwap, SpriteEffectsDiagnostics,
-    SpriteEffectsPlugin, SpriteEffectsSystems, SquashStretchConfig, SquashStretchEffect,
+    SpriteEffectsPlugin, SpriteEffectsSystems, SquashStretchEffect,
 };
 
 const DEFAULT_BRP_PORT: u16 = 15_743;
@@ -316,12 +320,12 @@ fn auto_showcase(
             ..FlashConfig::default()
         }));
     commands.entity(entities.screen_flash).insert((
-        FlashEffect::new(FlashConfig::damage()),
-        SquashStretchEffect::new(SquashStretchConfig::landing()),
+        FlashEffect::new(showcase_screen_flash_config()),
+        SquashStretchEffect::new(showcase_grounded_squash_config()),
     ));
     commands
         .entity(entities.atlas_target)
-        .insert(FlashEffect::new(FlashConfig::damage()));
+        .insert(FlashEffect::new(showcase_screen_flash_config()));
 
     const PALETTE_ROWS: [u32; 3] = [1, 2, 3];
     auto.palette_index = (auto.palette_index + 1) % PALETTE_ROWS.len();
@@ -344,7 +348,7 @@ fn auto_showcase(
                 DissolvePhase::Hide
             },
             completion: DissolveCompletion::RestoreVisible,
-            ..DissolveConfig::default()
+            ..showcase_dissolve_config()
         }));
     auto.dissolve_reveal = !auto.dissolve_reveal;
 
@@ -352,12 +356,12 @@ fn auto_showcase(
         if index % 4 == auto.phase % 4 {
             commands
                 .entity(entity)
-                .insert(FlashEffect::new(FlashConfig::damage()));
+                .insert(FlashEffect::new(showcase_screen_flash_config()));
         }
         if index % 5 == auto.phase % 5 {
             commands
                 .entity(entity)
-                .insert(SquashStretchEffect::new(SquashStretchConfig::landing()));
+                .insert(SquashStretchEffect::new(showcase_grounded_squash_config()));
         }
         if index % 7 == auto.phase % 7 {
             commands
@@ -365,7 +369,7 @@ fn auto_showcase(
                 .insert(DissolveEffect::new(DissolveConfig {
                     duration_secs: 0.32,
                     completion: DissolveCompletion::RestoreVisible,
-                    ..DissolveConfig::hide()
+                    ..showcase_hide_dissolve_config()
                 }));
         }
     }
