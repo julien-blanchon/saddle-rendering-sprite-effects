@@ -15,13 +15,13 @@ mod math;
 mod systems;
 
 pub use components::{
-    DissolveEffect, FlashEffect, OutlineEffect, PaletteSwap, SilhouetteEffect,
-    SpriteEffectFinished, SpriteEffectKind, SquashStretchEffect,
+    DissolveEffect, FlashEffect, OutlineEffect, PaletteSwap, ShakeEffect, SilhouetteEffect,
+    SpriteEffectFinished, SpriteEffectKind, SpriteEffectStarted, SquashStretchEffect,
 };
 pub use config::{
-    DissolveCompletion, DissolveConfig, DissolveOverlap, DissolvePattern, DissolvePhase,
-    EffectTimeDomain, FlashBlendMode, FlashConfig, FlashOverlap, OutlineConfig, PaletteConfig,
-    SilhouetteConfig, SquashOverlap, SquashStretchConfig,
+    ColorStop, DissolveCompletion, DissolveConfig, DissolvePattern, DissolvePhase,
+    EffectTimeDomain, FlashBlendMode, FlashConfig, LoopMode, OutlineConfig, OverlapPolicy,
+    PaletteConfig, ShakeConfig, SilhouetteConfig, SquashStretchConfig,
 };
 pub use diagnostics::SpriteEffectsDiagnostics;
 
@@ -97,27 +97,31 @@ impl Plugin for SpriteEffectsPlugin {
             .init_resource::<SpriteEffectsDiagnostics>()
             .init_resource::<material::SpriteEffectsInternalAssets>()
             .add_message::<SpriteEffectFinished>()
+            .add_message::<SpriteEffectStarted>()
+            .register_type::<ColorStop>()
             .register_type::<DissolveCompletion>()
             .register_type::<DissolveConfig>()
             .register_type::<DissolveEffect>()
-            .register_type::<DissolveOverlap>()
             .register_type::<DissolvePattern>()
             .register_type::<DissolvePhase>()
             .register_type::<EffectTimeDomain>()
             .register_type::<FlashBlendMode>()
             .register_type::<FlashConfig>()
             .register_type::<FlashEffect>()
-            .register_type::<FlashOverlap>()
+            .register_type::<LoopMode>()
             .register_type::<OutlineConfig>()
             .register_type::<OutlineEffect>()
+            .register_type::<OverlapPolicy>()
             .register_type::<PaletteConfig>()
             .register_type::<PaletteSwap>()
+            .register_type::<ShakeConfig>()
+            .register_type::<ShakeEffect>()
             .register_type::<SilhouetteConfig>()
             .register_type::<SilhouetteEffect>()
             .register_type::<SpriteEffectFinished>()
             .register_type::<SpriteEffectKind>()
+            .register_type::<SpriteEffectStarted>()
             .register_type::<SpriteEffectsDiagnostics>()
-            .register_type::<SquashOverlap>()
             .register_type::<SquashStretchConfig>()
             .register_type::<SquashStretchEffect>()
             .add_systems(self.activate_schedule, systems::activate_runtime)
@@ -150,6 +154,7 @@ impl Plugin for SpriteEffectsPlugin {
                         systems::tick_flash_effects,
                         systems::tick_dissolve_effects,
                         systems::tick_squash_effects,
+                        systems::tick_shake_effects,
                         systems::apply_native_flash,
                     )
                         .chain()

@@ -1,15 +1,21 @@
 use bevy::prelude::*;
 
 use crate::config::{
-    DissolveConfig, FlashConfig, OutlineConfig, PaletteConfig, SilhouetteConfig,
+    DissolveConfig, FlashConfig, OutlineConfig, PaletteConfig, ShakeConfig, SilhouetteConfig,
     SquashStretchConfig,
 };
+
+// ---------------------------------------------------------------------------
+// Effect components
+// ---------------------------------------------------------------------------
 
 #[derive(Component, Reflect, Clone, Debug, PartialEq)]
 #[reflect(Component, Default)]
 pub struct FlashEffect {
     pub enabled: bool,
     pub config: FlashConfig,
+    /// Incremented by `restart()` to force a reset even while running.
+    pub generation: u32,
 }
 
 impl Default for FlashEffect {
@@ -17,6 +23,7 @@ impl Default for FlashEffect {
         Self {
             enabled: true,
             config: FlashConfig::default(),
+            generation: 0,
         }
     }
 }
@@ -27,7 +34,20 @@ impl FlashEffect {
         Self {
             enabled: true,
             config,
+            generation: 0,
         }
+    }
+
+    /// Re-enable a persistent effect so it replays from the start.
+    pub fn retrigger(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
+    }
+
+    /// Force-restart the effect from the beginning, even if already playing.
+    pub fn restart(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
     }
 }
 
@@ -36,6 +56,7 @@ impl FlashEffect {
 pub struct DissolveEffect {
     pub enabled: bool,
     pub config: DissolveConfig,
+    pub generation: u32,
 }
 
 impl Default for DissolveEffect {
@@ -43,6 +64,7 @@ impl Default for DissolveEffect {
         Self {
             enabled: true,
             config: DissolveConfig::default(),
+            generation: 0,
         }
     }
 }
@@ -53,7 +75,18 @@ impl DissolveEffect {
         Self {
             enabled: true,
             config,
+            generation: 0,
         }
+    }
+
+    pub fn retrigger(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
+    }
+
+    pub fn restart(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
     }
 }
 
@@ -62,6 +95,7 @@ impl DissolveEffect {
 pub struct SquashStretchEffect {
     pub enabled: bool,
     pub config: SquashStretchConfig,
+    pub generation: u32,
 }
 
 impl Default for SquashStretchEffect {
@@ -69,6 +103,7 @@ impl Default for SquashStretchEffect {
         Self {
             enabled: true,
             config: SquashStretchConfig::default(),
+            generation: 0,
         }
     }
 }
@@ -79,9 +114,63 @@ impl SquashStretchEffect {
         Self {
             enabled: true,
             config,
+            generation: 0,
+        }
+    }
+
+    pub fn retrigger(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
+    }
+
+    pub fn restart(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
+    }
+}
+
+#[derive(Component, Reflect, Clone, Debug, PartialEq)]
+#[reflect(Component, Default)]
+pub struct ShakeEffect {
+    pub enabled: bool,
+    pub config: ShakeConfig,
+    pub generation: u32,
+}
+
+impl Default for ShakeEffect {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            config: ShakeConfig::default(),
+            generation: 0,
         }
     }
 }
+
+impl ShakeEffect {
+    #[must_use]
+    pub fn new(config: ShakeConfig) -> Self {
+        Self {
+            enabled: true,
+            config,
+            generation: 0,
+        }
+    }
+
+    pub fn retrigger(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
+    }
+
+    pub fn restart(&mut self) {
+        self.enabled = true;
+        self.generation = self.generation.wrapping_add(1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Persistent effects (unchanged)
+// ---------------------------------------------------------------------------
 
 #[derive(Component, Reflect, Clone, Debug, PartialEq)]
 #[reflect(Component, Default)]
@@ -161,6 +250,16 @@ impl SilhouetteEffect {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Messages
+// ---------------------------------------------------------------------------
+
+#[derive(Message, Reflect, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SpriteEffectStarted {
+    pub entity: Entity,
+    pub effect: SpriteEffectKind,
+}
+
 #[derive(Message, Reflect, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SpriteEffectFinished {
     pub entity: Entity,
@@ -173,4 +272,5 @@ pub enum SpriteEffectKind {
     Flash,
     Dissolve,
     SquashStretch,
+    Shake,
 }

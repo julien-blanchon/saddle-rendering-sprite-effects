@@ -8,6 +8,7 @@ members = [
     "outline_silhouette",
     "atlas_animation",
     "stress",
+    "shake_delay_loop",
     "lab",
 ]
 resolver = "3"

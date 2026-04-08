@@ -1,16 +1,15 @@
-use saddle_rendering_sprite_effects_example_common as common;
+//! Dissolve patterns: noise, radial, and authored mask.
+//! All loop automatically. Press R to reset.
 
 use bevy::prelude::*;
 use common::{
-    add_demo_assets, install_auto_exit, setup_camera, showcase_hide_dissolve_config,
-    showcase_reveal_dissolve_config,
+    add_demo_assets, install_auto_exit, reset_all_effects_on_r, setup_camera, spawn_label,
+    showcase_hide_dissolve_config, showcase_reveal_dissolve_config,
 };
 use saddle_rendering_sprite_effects::{
-    DissolveConfig, DissolveEffect, DissolvePattern, SpriteEffectsPlugin,
+    DissolveConfig, DissolveEffect, DissolvePattern, DissolvePhase, LoopMode, SpriteEffectsPlugin,
 };
-
-#[derive(Resource)]
-struct DissolveCycle(Timer);
+use saddle_rendering_sprite_effects_example_common as common;
 
 fn main() {
     let mut app = App::new();
@@ -18,12 +17,8 @@ fn main() {
     app.add_plugins(SpriteEffectsPlugin::default());
     common::install_pane(&mut app);
     install_auto_exit(&mut app, "SPRITE_EFFECTS_EXIT_AFTER_SECONDS");
-    app.insert_resource(DissolveCycle(Timer::from_seconds(
-        0.8,
-        TimerMode::Repeating,
-    )));
     app.add_systems(Startup, setup);
-    app.add_systems(Update, trigger_dissolves);
+    app.add_systems(Update, reset_all_effects_on_r);
     app.run();
 }
 
@@ -34,62 +29,73 @@ fn setup(
 ) {
     setup_camera(
         &mut commands,
-        "sprite_effects dissolve",
-        "Noise, radial, and authored-mask dissolves share the same material-backed proxy path.",
+        "sprite_effects — dissolve",
+        "Noise, radial, and authored-mask dissolves. Press R to reset.",
     );
     let assets = add_demo_assets(&mut images, &mut atlases);
 
+    // 1. Noise dissolve (hide) — loops
     commands.spawn((
         Name::new("Noise Dissolve"),
         Sprite::from_image(assets.sprite.clone()),
-        Transform::from_xyz(-220.0, 0.0, 0.0).with_scale(Vec3::splat(8.0)),
+        Transform::from_xyz(-250.0, 0.0, 0.0).with_scale(Vec3::splat(8.0)),
+        DissolveEffect::new(DissolveConfig {
+            pattern: DissolvePattern::Noise,
+            duration_secs: 1.0,
+            delay_secs: 0.5,
+            loop_mode: LoopMode::Forever,
+            persistent: true,
+            ..showcase_hide_dissolve_config()
+        }),
     ));
+    spawn_label(
+        &mut commands,
+        "Noise Dissolve (hide)\nProcedural hash pattern\nLoops with 0.5s pause",
+        -250.0,
+        -120.0,
+    );
+
+    // 2. Radial dissolve (hide) — loops
     commands.spawn((
         Name::new("Radial Dissolve"),
         Sprite::from_image(assets.sprite.clone()),
         Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(8.0)),
+        DissolveEffect::new(DissolveConfig {
+            pattern: DissolvePattern::RadialOut,
+            duration_secs: 1.0,
+            delay_secs: 0.5,
+            loop_mode: LoopMode::Forever,
+            persistent: true,
+            ..showcase_hide_dissolve_config()
+        }),
     ));
+    spawn_label(
+        &mut commands,
+        "Radial Dissolve (hide)\nDistance-from-center field\nLoops with 0.5s pause",
+        0.0,
+        -120.0,
+    );
+
+    // 3. Mask dissolve (reveal) — loops
     commands.spawn((
         Name::new("Mask Dissolve"),
-        Sprite::from_image(assets.sprite),
-        Transform::from_xyz(220.0, 0.0, 0.0).with_scale(Vec3::splat(8.0)),
+        Sprite::from_image(assets.sprite.clone()),
+        Transform::from_xyz(250.0, 0.0, 0.0).with_scale(Vec3::splat(8.0)),
         DissolveEffect::new(DissolveConfig {
-            phase: saddle_rendering_sprite_effects::DissolvePhase::Reveal,
+            phase: DissolvePhase::Reveal,
             pattern: DissolvePattern::Mask,
-            mask_texture: Some(assets.mask),
-            duration_secs: 0.6,
+            mask_texture: Some(assets.mask.clone()),
+            duration_secs: 1.2,
+            delay_secs: 0.4,
+            loop_mode: LoopMode::Forever,
+            persistent: true,
             ..showcase_reveal_dissolve_config()
         }),
     ));
-}
-
-fn trigger_dissolves(
-    time: Res<Time>,
-    mut cycle: ResMut<DissolveCycle>,
-    mut commands: Commands,
-    query: Query<(Entity, &Name)>,
-) {
-    if !cycle.0.tick(time.delta()).just_finished() {
-        return;
-    }
-
-    for (entity, name) in &query {
-        let effect = match name.as_str() {
-            "Noise Dissolve" => Some(DissolveEffect::new(DissolveConfig {
-                pattern: DissolvePattern::Noise,
-                duration_secs: 0.55,
-                ..showcase_hide_dissolve_config()
-            })),
-            "Radial Dissolve" => Some(DissolveEffect::new(DissolveConfig {
-                pattern: DissolvePattern::RadialOut,
-                duration_secs: 0.55,
-                ..showcase_hide_dissolve_config()
-            })),
-            _ => None,
-        };
-
-        if let Some(effect) = effect {
-            commands.entity(entity).insert(effect);
-        }
-    }
+    spawn_label(
+        &mut commands,
+        "Mask Dissolve (reveal)\nAuthored radial mask texture\nLoops with 0.4s pause",
+        250.0,
+        -120.0,
+    );
 }

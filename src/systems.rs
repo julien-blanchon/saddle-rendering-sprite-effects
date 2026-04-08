@@ -11,31 +11,52 @@ use bevy::{
 use crate::{
     SpriteEffectsRuntimeState,
     components::{
-        DissolveEffect, FlashEffect, OutlineEffect, PaletteSwap, SilhouetteEffect,
-        SpriteEffectFinished, SpriteEffectKind, SquashStretchEffect,
+        DissolveEffect, FlashEffect, OutlineEffect, PaletteSwap, ShakeEffect, SilhouetteEffect,
+        SpriteEffectFinished, SpriteEffectKind, SpriteEffectStarted, SquashStretchEffect,
     },
-    config::{DissolveCompletion, DissolvePattern, FlashBlendMode, FlashOverlap, SquashOverlap},
+    config::{DissolveCompletion, DissolvePattern, FlashBlendMode, LoopMode},
     diagnostics::SpriteEffectsDiagnostics,
     material::{SpriteEffectsInternalAssets, SpriteEffectsMaterial, SpriteEffectsUniform},
     math::{
-        color_to_vec4, dissolve_threshold, effect_progress, flash_weight, resolve_time_delta,
-        sample_squash, sprite_draw_size, sprite_uv_rect,
+        color_to_vec4, dissolve_threshold, flash_color_at, flash_weight,
+        resolve_time_delta, sample_shake, sample_squash, sprite_draw_size, sprite_uv_rect,
     },
 };
+
+// ---------------------------------------------------------------------------
+// Runtime components (internal)
+// ---------------------------------------------------------------------------
 
 #[derive(Component, Debug, Default)]
 pub(crate) struct FlashRuntime {
     pub elapsed_secs: f32,
+    pub started: bool,
+    pub loops_completed: u32,
+    pub generation: u32,
 }
 
 #[derive(Component, Debug, Default)]
 pub(crate) struct DissolveRuntime {
     pub elapsed_secs: f32,
+    pub started: bool,
+    pub loops_completed: u32,
+    pub generation: u32,
 }
 
 #[derive(Component, Debug, Default)]
 pub(crate) struct SquashRuntime {
     pub elapsed_secs: f32,
+    pub started: bool,
+    pub loops_completed: u32,
+    pub generation: u32,
+}
+
+#[derive(Component, Debug, Default)]
+pub(crate) struct ShakeRuntime {
+    pub elapsed_secs: f32,
+    pub started: bool,
+    pub loops_completed: u32,
+    pub generation: u32,
 }
 
 #[derive(Component, Debug, Default)]
@@ -60,6 +81,50 @@ pub(crate) struct ShaderProxy {
 #[derive(Component, Debug, Clone, Copy)]
 pub(crate) struct ShaderProxyChild;
 
+// ---------------------------------------------------------------------------
+// Loop helper
+// ---------------------------------------------------------------------------
+
+/// Compute position within the current loop iteration.
+///
+/// Each loop period = `delay` + `duration`. During the first `delay` seconds
+/// of each period, `None` is returned (effect is at rest). During the
+/// remaining `duration` seconds, `Some(local_elapsed)` is returned.
+///
+/// Returns `Err(())` when all loop iterations have completed.
+fn loop_position(
+    raw_elapsed: f32,
+    delay: f32,
+    duration: f32,
+    loop_mode: &LoopMode,
+    loops_completed: &mut u32,
+) -> Result<Option<f32>, ()> {
+    let period = (delay + duration).max(f32::EPSILON);
+    if duration <= f32::EPSILON {
+        return Err(()); // instant
+    }
+    let total_loops_done = (raw_elapsed / period).floor() as u32;
+    let max_loops = match loop_mode {
+        LoopMode::None => 1,
+        LoopMode::Count(n) => *n,
+        LoopMode::Forever => u32::MAX,
+    };
+    *loops_completed = total_loops_done.min(max_loops);
+    if total_loops_done >= max_loops {
+        return Err(()); // all loops finished
+    }
+    let local_in_period = raw_elapsed - total_loops_done as f32 * period;
+    if local_in_period < delay {
+        Ok(None) // in the delay/rest portion
+    } else {
+        Ok(Some(local_in_period - delay))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Activation / deactivation
+// ---------------------------------------------------------------------------
+
 pub(crate) fn activate_runtime(mut state: ResMut<SpriteEffectsRuntimeState>) {
     state.active = true;
 }
@@ -71,6 +136,10 @@ pub(crate) fn deactivate_runtime(mut state: ResMut<SpriteEffectsRuntimeState>) {
 pub(crate) fn runtime_is_active(state: Res<SpriteEffectsRuntimeState>) -> bool {
     state.active
 }
+
+// ---------------------------------------------------------------------------
+// Prepare
+// ---------------------------------------------------------------------------
 
 pub(crate) fn ensure_internal_mesh(
     mut internal: ResMut<SpriteEffectsInternalAssets>,
@@ -104,107 +173,217 @@ pub(crate) fn restore_presented_transform_state(
     }
 }
 
+pub(crate) fn enforce_palette_samplers(
+    mut images: ResMut<Assets<Image>>,
+    query: Query<&PaletteSwap, Or<(Added<PaletteSwap>, Changed<PaletteSwap>)>>,
+) {
+    for palette in &query {
+        if !palette.enabled || !palette.config.enforce_nearest_sampling {
+            continue;
+        }
+        if let Some(image) = images.get_mut(&palette.config.texture) {
+            image.sampler = ImageSampler::nearest();
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tick: Flash
+// ---------------------------------------------------------------------------
+
 pub(crate) fn tick_flash_effects(
     mut commands: Commands,
     virtual_time: Res<Time<Virtual>>,
     real_time: Res<Time<Real>>,
     mut finished: MessageWriter<SpriteEffectFinished>,
-    mut query: Query<(Entity, Ref<FlashEffect>, Option<&mut FlashRuntime>)>,
+    mut started: MessageWriter<SpriteEffectStarted>,
+    mut query: Query<(Entity, Mut<FlashEffect>, Option<&mut FlashRuntime>)>,
 ) {
-    for (entity, effect, runtime) in &mut query {
+    for (entity, mut effect, runtime) in &mut query {
         if !effect.enabled {
             continue;
         }
 
-        let mut elapsed_secs = runtime.as_ref().map_or(0.0, |runtime| runtime.elapsed_secs);
-        if runtime.is_none()
-            || effect.is_changed()
-                && matches!(
-                    effect.config.overlap,
-                    FlashOverlap::Refresh | FlashOverlap::Replace
-                )
-        {
-            elapsed_secs = 0.0;
-        } else {
-            elapsed_secs +=
-                resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
-        }
-        commands
-            .entity(entity)
-            .insert(FlashRuntime { elapsed_secs });
+        let dt = resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
 
-        if effect_progress(effect.config.duration_secs, elapsed_secs) >= 1.0 {
-            commands
-                .entity(entity)
-                .remove::<FlashEffect>()
-                .remove::<FlashRuntime>();
-            finished.write(SpriteEffectFinished {
-                entity,
-                effect: SpriteEffectKind::Flash,
+        if let Some(mut runtime) = runtime {
+            let generation_changed = runtime.generation != effect.generation;
+            if generation_changed {
+                runtime.elapsed_secs = 0.0;
+                runtime.started = false;
+                runtime.loops_completed = 0;
+                runtime.generation = effect.generation;
+            }
+            runtime.elapsed_secs += dt;
+
+            let pos = loop_position(
+                runtime.elapsed_secs,
+                effect.config.delay_secs,
+                effect.config.duration_secs,
+                &effect.config.loop_mode,
+                &mut runtime.loops_completed,
+            );
+
+            match pos {
+                Err(()) => {
+                    if effect.config.persistent {
+                        effect.enabled = false;
+                    }
+                    finish_transient::<FlashEffect, FlashRuntime>(
+                        &mut commands,
+                        entity,
+                        effect.config.persistent,
+                        SpriteEffectKind::Flash,
+                        &mut finished,
+                    );
+                }
+                Ok(Some(_)) if !runtime.started => {
+                    runtime.started = true;
+                    started.write(SpriteEffectStarted {
+                        entity,
+                        effect: SpriteEffectKind::Flash,
+                    });
+                }
+                _ => {}
+            }
+        } else {
+            let mut lc = 0u32;
+            let pos = loop_position(
+                dt,
+                effect.config.delay_secs,
+                effect.config.duration_secs,
+                &effect.config.loop_mode,
+                &mut lc,
+            );
+            let first_started = matches!(pos, Ok(Some(_)));
+            commands.entity(entity).insert(FlashRuntime {
+                elapsed_secs: dt,
+                started: first_started,
+                loops_completed: lc,
+                generation: effect.generation,
             });
-        }
+            if first_started {
+                started.write(SpriteEffectStarted {
+                    entity,
+                    effect: SpriteEffectKind::Flash,
+                });
+            }
+        };
     }
 }
+
+// ---------------------------------------------------------------------------
+// Tick: Dissolve
+// ---------------------------------------------------------------------------
 
 pub(crate) fn tick_dissolve_effects(
     mut commands: Commands,
     virtual_time: Res<Time<Virtual>>,
     real_time: Res<Time<Real>>,
     mut finished: MessageWriter<SpriteEffectFinished>,
-    mut query: Query<(Entity, Ref<DissolveEffect>, Option<&mut DissolveRuntime>)>,
+    mut started: MessageWriter<SpriteEffectStarted>,
+    mut query: Query<(Entity, Mut<DissolveEffect>, Option<&mut DissolveRuntime>)>,
 ) {
-    for (entity, effect, runtime) in &mut query {
+    for (entity, mut effect, runtime) in &mut query {
         if !effect.enabled {
             continue;
         }
 
-        let mut elapsed_secs = runtime.as_ref().map_or(0.0, |runtime| runtime.elapsed_secs);
-        let needs_reset = runtime.is_none()
-            || effect.is_changed()
-                && matches!(
-                    effect.config.overlap,
-                    crate::config::DissolveOverlap::Replace
-                        | crate::config::DissolveOverlap::Refresh
-                );
-        if needs_reset {
-            elapsed_secs = 0.0;
-        } else {
-            elapsed_secs +=
-                resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
-        }
-        commands
-            .entity(entity)
-            .insert(DissolveRuntime { elapsed_secs });
+        let dt = resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
 
-        if effect_progress(effect.config.duration_secs, elapsed_secs) >= 1.0 {
-            match effect.config.completion {
-                DissolveCompletion::RestoreVisible => {
-                    commands
-                        .entity(entity)
-                        .remove::<DissolveEffect>()
-                        .remove::<DissolveRuntime>();
-                }
-                DissolveCompletion::HideEntity => {
-                    commands
-                        .entity(entity)
-                        .insert(Visibility::Hidden)
-                        .remove::<DissolveEffect>()
-                        .remove::<DissolveRuntime>();
-                }
-                DissolveCompletion::DespawnEntity => {
-                    commands.entity(entity).despawn_related::<Children>();
-                    commands.entity(entity).despawn();
-                }
+        if let Some(mut runtime) = runtime {
+            let generation_changed = runtime.generation != effect.generation;
+            if generation_changed {
+                runtime.elapsed_secs = 0.0;
+                runtime.started = false;
+                runtime.loops_completed = 0;
+                runtime.generation = effect.generation;
             }
+            runtime.elapsed_secs += dt;
 
-            finished.write(SpriteEffectFinished {
-                entity,
-                effect: SpriteEffectKind::Dissolve,
+            let pos = loop_position(
+                runtime.elapsed_secs,
+                effect.config.delay_secs,
+                effect.config.duration_secs,
+                &effect.config.loop_mode,
+                &mut runtime.loops_completed,
+            );
+
+            match pos {
+                Err(()) => {
+                    if effect.config.persistent {
+                        effect.enabled = false;
+                    }
+                    match effect.config.completion {
+                        DissolveCompletion::RestoreVisible => {
+                            finish_transient::<DissolveEffect, DissolveRuntime>(
+                                &mut commands,
+                                entity,
+                                effect.config.persistent,
+                                SpriteEffectKind::Dissolve,
+                                &mut finished,
+                            );
+                        }
+                        DissolveCompletion::HideEntity => {
+                            commands.entity(entity).insert(Visibility::Hidden);
+                            finish_transient::<DissolveEffect, DissolveRuntime>(
+                                &mut commands,
+                                entity,
+                                effect.config.persistent,
+                                SpriteEffectKind::Dissolve,
+                                &mut finished,
+                            );
+                        }
+                        DissolveCompletion::DespawnEntity => {
+                            commands.entity(entity).despawn_related::<Children>();
+                            commands.entity(entity).despawn();
+                            finished.write(SpriteEffectFinished {
+                                entity,
+                                effect: SpriteEffectKind::Dissolve,
+                            });
+                        }
+                    }
+                }
+                Ok(Some(_)) if !runtime.started => {
+                    runtime.started = true;
+                    started.write(SpriteEffectStarted {
+                        entity,
+                        effect: SpriteEffectKind::Dissolve,
+                    });
+                }
+                _ => {}
+            }
+        } else {
+            let mut lc = 0u32;
+            let pos = loop_position(
+                dt,
+                effect.config.delay_secs,
+                effect.config.duration_secs,
+                &effect.config.loop_mode,
+                &mut lc,
+            );
+            let first_started = matches!(pos, Ok(Some(_)));
+            commands.entity(entity).insert(DissolveRuntime {
+                elapsed_secs: dt,
+                started: first_started,
+                loops_completed: lc,
+                generation: effect.generation,
             });
-        }
+            if first_started {
+                started.write(SpriteEffectStarted {
+                    entity,
+                    effect: SpriteEffectKind::Dissolve,
+                });
+            }
+        };
     }
 }
 
+// ---------------------------------------------------------------------------
+// Tick: Squash/Stretch
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn tick_squash_effects(
     mut commands: Commands,
     virtual_time: Res<Time<Virtual>>,
@@ -212,9 +391,10 @@ pub(crate) fn tick_squash_effects(
     images: Res<Assets<Image>>,
     atlases: Res<Assets<TextureAtlasLayout>>,
     mut finished: MessageWriter<SpriteEffectFinished>,
+    mut started: MessageWriter<SpriteEffectStarted>,
     mut query: Query<(
         Entity,
-        Ref<SquashStretchEffect>,
+        Mut<SquashStretchEffect>,
         Option<&mut SquashRuntime>,
         &Anchor,
         &Sprite,
@@ -222,42 +402,80 @@ pub(crate) fn tick_squash_effects(
         Option<&mut PresentedTransformState>,
     )>,
 ) {
-    for (entity, effect, runtime, anchor, sprite, mut transform, presented) in &mut query {
+    for (entity, mut effect, mut runtime, anchor, sprite, mut transform, presented) in &mut query {
         if !effect.enabled {
             continue;
         }
 
-        let mut elapsed_secs = runtime.as_ref().map_or(0.0, |runtime| runtime.elapsed_secs);
-        let needs_reset = runtime.is_none()
-            || effect.is_changed()
-                && matches!(
-                    effect.config.overlap,
-                    SquashOverlap::Refresh | SquashOverlap::Replace
-                );
-        if needs_reset {
-            elapsed_secs = resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
-        } else {
-            elapsed_secs +=
-                resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
-        }
-        commands
-            .entity(entity)
-            .insert(SquashRuntime { elapsed_secs });
+        let dt = resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
 
-        if effect_progress(effect.config.duration_secs, elapsed_secs) >= 1.0 {
-            commands
-                .entity(entity)
-                .remove::<SquashStretchEffect>()
-                .remove::<SquashRuntime>();
-            finished.write(SpriteEffectFinished {
+        // Advance or create runtime.
+        let elapsed_secs = if let Some(ref mut rt) = runtime {
+            let generation_changed = rt.generation != effect.generation;
+            if generation_changed {
+                rt.elapsed_secs = dt;
+                rt.started = false;
+                rt.loops_completed = 0;
+                rt.generation = effect.generation;
+            } else {
+                rt.elapsed_secs += dt;
+            }
+            rt.elapsed_secs
+        } else {
+            commands.entity(entity).insert(SquashRuntime {
+                elapsed_secs: dt,
+                started: false,
+                loops_completed: 0,
+                generation: effect.generation,
+            });
+            dt
+        };
+
+        let mut lc = runtime.as_ref().map_or(0, |rt| rt.loops_completed);
+        let pos = loop_position(
+            elapsed_secs,
+            effect.config.delay_secs,
+            effect.config.duration_secs,
+            &effect.config.loop_mode,
+            &mut lc,
+        );
+
+        let local_elapsed = match pos {
+            Err(()) => {
+                if effect.config.persistent {
+                    effect.enabled = false;
+                }
+                finish_transient::<SquashStretchEffect, SquashRuntime>(
+                    &mut commands,
+                    entity,
+                    effect.config.persistent,
+                    SpriteEffectKind::SquashStretch,
+                    &mut finished,
+                );
+                continue;
+            }
+            Ok(None) => continue,
+            Ok(Some(t)) => t,
+        };
+
+        // Fire started message on first active frame.
+        let was_started = runtime.as_ref().is_some_and(|rt| rt.started);
+        if !was_started {
+            if let Some(ref mut rt) = runtime {
+                rt.started = true;
+            }
+            started.write(SpriteEffectStarted {
                 entity,
                 effect: SpriteEffectKind::SquashStretch,
             });
+        }
+
+        if local_elapsed <= 0.0 {
             continue;
         }
 
         let size = sprite_draw_size(sprite, &images, &atlases);
-        let sample = sample_squash(&effect.config, elapsed_secs, *anchor, size);
+        let sample = sample_squash(&effect.config, local_elapsed, *anchor, size);
         if let Some(mut presented) = presented {
             presented.original_translation = transform.translation;
             presented.original_scale = transform.scale;
@@ -277,6 +495,118 @@ pub(crate) fn tick_squash_effects(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Tick: Shake
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn tick_shake_effects(
+    mut commands: Commands,
+    virtual_time: Res<Time<Virtual>>,
+    real_time: Res<Time<Real>>,
+    mut finished: MessageWriter<SpriteEffectFinished>,
+    mut started: MessageWriter<SpriteEffectStarted>,
+    mut query: Query<(
+        Entity,
+        Mut<ShakeEffect>,
+        Option<&mut ShakeRuntime>,
+        &mut Transform,
+        Option<&mut PresentedTransformState>,
+    )>,
+) {
+    for (entity, mut effect, mut runtime, mut transform, presented) in &mut query {
+        if !effect.enabled {
+            continue;
+        }
+
+        let dt = resolve_time_delta(effect.config.time_domain, &virtual_time, &real_time);
+
+        let elapsed_secs = if let Some(ref mut rt) = runtime {
+            let generation_changed = rt.generation != effect.generation;
+            if generation_changed {
+                rt.elapsed_secs = dt;
+                rt.started = false;
+                rt.loops_completed = 0;
+                rt.generation = effect.generation;
+            } else {
+                rt.elapsed_secs += dt;
+            }
+            rt.elapsed_secs
+        } else {
+            commands.entity(entity).insert(ShakeRuntime {
+                elapsed_secs: dt,
+                started: false,
+                loops_completed: 0,
+                generation: effect.generation,
+            });
+            dt
+        };
+
+        let mut lc = runtime.as_ref().map_or(0, |rt| rt.loops_completed);
+        let pos = loop_position(
+            elapsed_secs,
+            effect.config.delay_secs,
+            effect.config.duration_secs,
+            &effect.config.loop_mode,
+            &mut lc,
+        );
+
+        let local_elapsed = match pos {
+            Err(()) => {
+                if effect.config.persistent {
+                    effect.enabled = false;
+                }
+                finish_transient::<ShakeEffect, ShakeRuntime>(
+                    &mut commands,
+                    entity,
+                    effect.config.persistent,
+                    SpriteEffectKind::Shake,
+                    &mut finished,
+                );
+                continue;
+            }
+            Ok(None) => continue,
+            Ok(Some(t)) => t,
+        };
+
+        let was_started = runtime.as_ref().is_some_and(|rt| rt.started);
+        if !was_started {
+            if let Some(ref mut rt) = runtime {
+                rt.started = true;
+            }
+            started.write(SpriteEffectStarted {
+                entity,
+                effect: SpriteEffectKind::Shake,
+            });
+        }
+
+        if local_elapsed <= 0.0 {
+            continue;
+        }
+
+        let offset = sample_shake(&effect.config, local_elapsed);
+
+        if let Some(mut presented) = presented {
+            presented.original_translation = transform.translation;
+            presented.original_scale = transform.scale;
+            presented.active_last_frame = true;
+        } else {
+            commands.entity(entity).insert(PresentedTransformState {
+                original_translation: transform.translation,
+                original_scale: transform.scale,
+                active_last_frame: true,
+            });
+        }
+
+        transform.translation.x += offset.x;
+        transform.translation.y += offset.y;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Native flash (tint path, no proxy)
+// ---------------------------------------------------------------------------
+
 pub(crate) fn apply_native_flash(
     mut commands: Commands,
     mut query: Query<(
@@ -293,18 +623,35 @@ pub(crate) fn apply_native_flash(
     for (entity, effect, runtime, mut sprite, presented, palette, dissolve, proxy) in &mut query {
         if !effect.enabled
             || effect.config.blend != FlashBlendMode::Tint
-            || palette.is_some_and(|palette| palette.enabled)
-            || dissolve.is_some_and(|dissolve| dissolve.enabled)
+            || palette.is_some_and(|p| p.enabled)
+            || dissolve.is_some_and(|d| d.enabled)
             || proxy.is_some()
         {
             continue;
         }
 
-        let elapsed_secs = runtime.map_or(0.0, |runtime| runtime.elapsed_secs);
+        let elapsed_secs = runtime.map_or(0.0, |r| r.elapsed_secs);
+
+        // Compute local elapsed within current loop.
+        let mut lc = runtime.map_or(0, |r| r.loops_completed);
+        let pos = loop_position(
+            elapsed_secs,
+            effect.config.delay_secs,
+            effect.config.duration_secs,
+            &effect.config.loop_mode,
+            &mut lc,
+        );
+
+        let local_elapsed = match pos {
+            Ok(Some(t)) => t,
+            Ok(None) => 0.0,
+            Err(()) => 0.0,
+        };
+
         let weight = flash_weight(
             effect.config.easing,
             effect.config.duration_secs,
-            elapsed_secs,
+            local_elapsed,
         ) * effect.config.intensity.clamp(0.0, 1.0);
 
         if let Some(mut presented) = presented {
@@ -318,56 +665,55 @@ pub(crate) fn apply_native_flash(
         }
 
         let base = sprite.color.to_linear();
-        let flash = effect.config.color.to_linear();
+        let flash_col = flash_color_at(&effect.config, local_elapsed).to_linear();
         sprite.color = Color::LinearRgba(LinearRgba::new(
-            base.red + (flash.red - base.red) * weight,
-            base.green + (flash.green - base.green) * weight,
-            base.blue + (flash.blue - base.blue) * weight,
+            base.red + (flash_col.red - base.red) * weight,
+            base.green + (flash_col.green - base.green) * weight,
+            base.blue + (flash_col.blue - base.blue) * weight,
             base.alpha,
         ));
     }
 }
 
-pub(crate) fn enforce_palette_samplers(
-    mut images: ResMut<Assets<Image>>,
-    query: Query<&PaletteSwap>,
-) {
-    for palette in &query {
-        if !palette.enabled || !palette.config.enforce_nearest_sampling {
-            continue;
-        }
-        if let Some(image) = images.get_mut(&palette.config.texture) {
-            image.sampler = ImageSampler::nearest();
-        }
-    }
-}
+// ---------------------------------------------------------------------------
+// Cleanup
+// ---------------------------------------------------------------------------
 
 pub(crate) fn cleanup_disabled_effect_state(
     mut commands: Commands,
     flashes: Query<(Entity, &FlashEffect, Option<&FlashRuntime>)>,
     dissolves: Query<(Entity, &DissolveEffect, Option<&DissolveRuntime>)>,
     squashes: Query<(Entity, &SquashStretchEffect, Option<&SquashRuntime>)>,
+    shakes: Query<(Entity, &ShakeEffect, Option<&ShakeRuntime>)>,
 ) {
     for (entity, effect, runtime) in &flashes {
         if !effect.enabled && runtime.is_some() {
             commands.entity(entity).remove::<FlashRuntime>();
         }
     }
-
     for (entity, effect, runtime) in &dissolves {
         if !effect.enabled && runtime.is_some() {
             commands.entity(entity).remove::<DissolveRuntime>();
         }
     }
-
     for (entity, effect, runtime) in &squashes {
         if !effect.enabled && runtime.is_some() {
             commands.entity(entity).remove::<SquashRuntime>();
         }
     }
+    for (entity, effect, runtime) in &shakes {
+        if !effect.enabled && runtime.is_some() {
+            commands.entity(entity).remove::<ShakeRuntime>();
+        }
+    }
 }
 
+// ---------------------------------------------------------------------------
+// Shader proxy sync
+// ---------------------------------------------------------------------------
+
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 pub(crate) fn sync_shader_proxies(
     mut commands: Commands,
     images: Res<Assets<Image>>,
@@ -379,13 +725,13 @@ pub(crate) fn sync_shader_proxies(
             Entity,
             &mut Sprite,
             &Anchor,
-            Option<&FlashEffect>,
+            Option<Ref<FlashEffect>>,
             Option<&FlashRuntime>,
-            Option<&DissolveEffect>,
+            Option<Ref<DissolveEffect>>,
             Option<&DissolveRuntime>,
-            Option<&PaletteSwap>,
-            Option<&OutlineEffect>,
-            Option<&SilhouetteEffect>,
+            Option<Ref<PaletteSwap>>,
+            Option<Ref<OutlineEffect>>,
+            Option<Ref<SilhouetteEffect>>,
             Option<&ShaderProxy>,
             Option<&mut PresentedSpriteState>,
         ),
@@ -397,24 +743,34 @@ pub(crate) fn sync_shader_proxies(
         entity,
         mut sprite,
         anchor,
-        flash,
+        flash_ref,
         flash_runtime,
-        dissolve,
+        dissolve_ref,
         dissolve_runtime,
-        palette,
-        outline,
-        silhouette,
+        palette_ref,
+        outline_ref,
+        silhouette_ref,
         proxy,
         presented,
     ) in &mut owners
     {
-        let palette_enabled = palette
-            .is_some_and(|palette| palette.enabled && palette.config.texture != Handle::default());
-        let dissolve_enabled = dissolve.is_some_and(|effect| effect.enabled);
-        let outline_enabled = outline.is_some_and(|effect| effect.enabled);
-        let silhouette_enabled = silhouette.is_some_and(|effect| effect.enabled);
-        let shader_flash_enabled = flash
-            .is_some_and(|effect| effect.enabled && effect.config.blend == FlashBlendMode::Screen);
+        let palette_changed = palette_ref.as_ref().is_some_and(|r| r.is_changed());
+        let outline_changed = outline_ref.as_ref().is_some_and(|r| r.is_changed());
+        let silhouette_changed = silhouette_ref.as_ref().is_some_and(|r| r.is_changed());
+
+        let flash = flash_ref.as_deref();
+        let dissolve = dissolve_ref.as_deref();
+        let palette = palette_ref.as_deref();
+        let outline = outline_ref.as_deref();
+        let silhouette = silhouette_ref.as_deref();
+
+        let palette_enabled =
+            palette.is_some_and(|p| p.enabled && p.config.texture != Handle::default());
+        let dissolve_enabled = dissolve.is_some_and(|e| e.enabled);
+        let outline_enabled = outline.is_some_and(|e| e.enabled);
+        let silhouette_enabled = silhouette.is_some_and(|e| e.enabled);
+        let shader_flash_enabled =
+            flash.is_some_and(|e| e.enabled && e.config.blend == FlashBlendMode::Screen);
         let needs_proxy = palette_enabled
             || dissolve_enabled
             || shader_flash_enabled
@@ -434,15 +790,16 @@ pub(crate) fn sync_shader_proxies(
         let child_translation = Vec3::new(
             -anchor.as_vec().x * size.x,
             -anchor.as_vec().y * size.y,
-            silhouette.map_or(0.001, |effect| {
-                if effect.enabled {
-                    effect.config.sort_offset
+            silhouette.map_or(0.001, |e| {
+                if e.enabled {
+                    e.config.sort_offset
                 } else {
                     0.001
                 }
             }),
         );
         let child_scale = Vec3::new(size.x.max(1.0), size.y.max(1.0), 1.0);
+        let just_created = proxy.is_none();
 
         let (child, material_handle) = if let Some(proxy) = proxy {
             (proxy.child, proxy.material.clone())
@@ -489,6 +846,13 @@ pub(crate) fn sync_shader_proxies(
 
         sprite.color = authored_color.with_alpha(0.0);
 
+        let has_transient = shader_flash_enabled || dissolve_enabled;
+        let persistent_changed = palette_changed || outline_changed || silhouette_changed;
+        let sprite_changed = sprite.is_changed();
+        if !has_transient && !just_created && !persistent_changed && !sprite_changed {
+            continue;
+        }
+
         let uv_rect = sprite_uv_rect(&sprite, &images, &atlases);
         let mut uniform = SpriteEffectsUniform {
             base_color: color_to_vec4(authored_color),
@@ -507,44 +871,65 @@ pub(crate) fn sync_shader_proxies(
                 if sprite.flip_x { 1.0 } else { 0.0 },
                 if sprite.flip_y { 1.0 } else { 0.0 },
                 if palette_enabled { 1.0 } else { 0.0 },
-                palette.map_or(1.0, |palette| {
-                    if palette.config.preserve_alpha {
-                        1.0
-                    } else {
-                        0.0
-                    }
-                }),
+                palette.map_or(1.0, |p| if p.config.preserve_alpha { 1.0 } else { 0.0 }),
             ),
         };
 
         let mut palette_texture = None;
         let mut mask_texture = None;
 
-        if let Some(flash) = flash.filter(|flash| flash.enabled) {
-            let weight = flash_weight(
-                flash.config.easing,
+        if let Some(flash) = flash.filter(|f| f.enabled) {
+            let elapsed = flash_runtime.map_or(0.0, |r| r.elapsed_secs);
+            let mut lc = flash_runtime.map_or(0, |r| r.loops_completed);
+            let pos = loop_position(
+                elapsed,
+                flash.config.delay_secs,
                 flash.config.duration_secs,
-                flash_runtime.map_or(0.0, |runtime| runtime.elapsed_secs),
-            ) * flash.config.intensity;
-            uniform.flash_color = color_to_vec4(flash.config.color);
+                &flash.config.loop_mode,
+                &mut lc,
+            );
+            let local = match pos {
+                Ok(Some(t)) => t,
+                Ok(None) | Err(()) => 0.0,
+            };
+            let weight =
+                flash_weight(flash.config.easing, flash.config.duration_secs, local)
+                    * flash.config.intensity;
+            let fc = flash_color_at(&flash.config, local);
+            uniform.flash_color = color_to_vec4(fc);
             uniform.flash = Vec4::new(
                 weight,
-                if flash.config.blend == FlashBlendMode::Screen {
-                    1.0
-                } else {
-                    0.0
-                },
+                if flash.config.blend == FlashBlendMode::Screen { 1.0 } else { 0.0 },
                 1.0,
                 0.0,
             );
         }
 
-        if let Some(dissolve) = dissolve.filter(|dissolve| dissolve.enabled) {
-            let threshold = dissolve_threshold(
-                &dissolve.config,
-                dissolve_runtime.map_or(0.0, |runtime| runtime.elapsed_secs),
+        if let Some(dissolve) = dissolve.filter(|d| d.enabled) {
+            let elapsed = dissolve_runtime.map_or(0.0, |r| r.elapsed_secs);
+            let mut lc = dissolve_runtime.map_or(0, |r| r.loops_completed);
+            let pos = loop_position(
+                elapsed,
+                dissolve.config.delay_secs,
+                dissolve.config.duration_secs,
+                &dissolve.config.loop_mode,
+                &mut lc,
             );
-            uniform.edge_color = color_to_vec4(dissolve.config.edge_color);
+            let local = match pos {
+                Ok(Some(t)) => t,
+                Ok(None) => 0.0,
+                Err(()) => elapsed, // finished — use raw elapsed as fallback
+            };
+            let threshold = dissolve_threshold(&dissolve.config, local);
+
+            if let Some(ref gradient) = dissolve.config.edge_gradient {
+                if let Some(first) = gradient.first() {
+                    uniform.edge_color = color_to_vec4(first.color);
+                }
+            } else {
+                uniform.edge_color = color_to_vec4(dissolve.config.edge_color);
+            }
+
             uniform.dissolve = Vec4::new(
                 threshold,
                 dissolve.config.edge_width.max(0.0),
@@ -563,7 +948,7 @@ pub(crate) fn sync_shader_proxies(
             }
         }
 
-        if let Some(palette) = palette.filter(|palette| palette.enabled) {
+        if let Some(palette) = palette.filter(|p| p.enabled) {
             palette_texture = Some(palette.config.texture.clone());
             uniform.palette = Vec4::new(
                 palette.config.source_row as f32,
@@ -573,7 +958,7 @@ pub(crate) fn sync_shader_proxies(
             );
         }
 
-        if let Some(outline) = outline.filter(|outline| outline.enabled) {
+        if let Some(outline) = outline.filter(|o| o.enabled) {
             uniform.outline_color = color_to_vec4(outline.config.color);
             uniform.outline = Vec4::new(
                 outline.config.width_pixels.max(0.0),
@@ -583,7 +968,7 @@ pub(crate) fn sync_shader_proxies(
             );
         }
 
-        if let Some(silhouette) = silhouette.filter(|silhouette| silhouette.enabled) {
+        if let Some(silhouette) = silhouette.filter(|s| s.enabled) {
             uniform.silhouette_color = color_to_vec4(silhouette.config.color);
             uniform.silhouette = Vec4::new(
                 silhouette.config.alpha_threshold.clamp(0.0, 1.0),
@@ -602,18 +987,9 @@ pub(crate) fn sync_shader_proxies(
     }
 }
 
-fn dissolve_pattern_code(pattern: DissolvePattern) -> f32 {
-    match pattern {
-        DissolvePattern::Noise => 0.0,
-        DissolvePattern::LeftToRight => 1.0,
-        DissolvePattern::RightToLeft => 2.0,
-        DissolvePattern::BottomToTop => 3.0,
-        DissolvePattern::TopToBottom => 4.0,
-        DissolvePattern::RadialIn => 5.0,
-        DissolvePattern::RadialOut => 6.0,
-        DissolvePattern::Mask => 7.0,
-    }
-}
+// ---------------------------------------------------------------------------
+// Full cleanup (deactivation schedule)
+// ---------------------------------------------------------------------------
 
 pub(crate) fn cleanup_all(
     mut commands: Commands,
@@ -646,6 +1022,7 @@ pub(crate) fn cleanup_all(
         commands
             .entity(entity)
             .remove::<SquashRuntime>()
+            .remove::<ShakeRuntime>()
             .remove::<PresentedTransformState>();
     }
 
@@ -656,21 +1033,63 @@ pub(crate) fn cleanup_all(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Diagnostics
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn publish_diagnostics(
     mut diagnostics: ResMut<SpriteEffectsDiagnostics>,
     flashes: Query<&FlashEffect>,
     dissolves: Query<&DissolveEffect>,
     squashes: Query<&SquashStretchEffect>,
+    shakes: Query<&ShakeEffect>,
     palettes: Query<&PaletteSwap>,
     outlines: Query<&OutlineEffect>,
     silhouettes: Query<&SilhouetteEffect>,
     proxies: Query<&ShaderProxy>,
 ) {
-    diagnostics.active_flashes = flashes.iter().filter(|effect| effect.enabled).count();
-    diagnostics.active_dissolves = dissolves.iter().filter(|effect| effect.enabled).count();
-    diagnostics.active_squashes = squashes.iter().filter(|effect| effect.enabled).count();
-    diagnostics.active_palette_swaps = palettes.iter().filter(|effect| effect.enabled).count();
-    diagnostics.active_outlines = outlines.iter().filter(|effect| effect.enabled).count();
-    diagnostics.active_silhouettes = silhouettes.iter().filter(|effect| effect.enabled).count();
+    diagnostics.active_flashes = flashes.iter().filter(|e| e.enabled).count();
+    diagnostics.active_dissolves = dissolves.iter().filter(|e| e.enabled).count();
+    diagnostics.active_squashes = squashes.iter().filter(|e| e.enabled).count();
+    diagnostics.active_shakes = shakes.iter().filter(|e| e.enabled).count();
+    diagnostics.active_palette_swaps = palettes.iter().filter(|e| e.enabled).count();
+    diagnostics.active_outlines = outlines.iter().filter(|e| e.enabled).count();
+    diagnostics.active_silhouettes = silhouettes.iter().filter(|e| e.enabled).count();
     diagnostics.active_shader_proxies = proxies.iter().count();
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+fn dissolve_pattern_code(pattern: DissolvePattern) -> f32 {
+    match pattern {
+        DissolvePattern::Noise => 0.0,
+        DissolvePattern::LeftToRight => 1.0,
+        DissolvePattern::RightToLeft => 2.0,
+        DissolvePattern::BottomToTop => 3.0,
+        DissolvePattern::TopToBottom => 4.0,
+        DissolvePattern::RadialIn => 5.0,
+        DissolvePattern::RadialOut => 6.0,
+        DissolvePattern::Mask => 7.0,
+    }
+}
+
+fn finish_transient<E: Component, R: Component>(
+    commands: &mut Commands,
+    entity: Entity,
+    persistent: bool,
+    kind: SpriteEffectKind,
+    finished: &mut MessageWriter<SpriteEffectFinished>,
+) {
+    if persistent {
+        commands.entity(entity).remove::<R>();
+    } else {
+        commands.entity(entity).remove::<E>().remove::<R>();
+    }
+    finished.write(SpriteEffectFinished {
+        entity,
+        effect: kind,
+    });
 }

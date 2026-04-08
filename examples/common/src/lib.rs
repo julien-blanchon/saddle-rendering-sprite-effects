@@ -7,9 +7,10 @@ use bevy::sprite::Anchor;
 use saddle_pane::prelude::*;
 
 use saddle_rendering_sprite_effects::{
-    DissolveConfig, DissolveEffect, DissolvePattern, DissolvePhase, FlashBlendMode, FlashConfig,
-    FlashEffect, OutlineEffect, PaletteConfig, PaletteSwap, SilhouetteConfig, SilhouetteEffect,
-    SpriteEffectsDiagnostics, SquashStretchConfig, SquashStretchEffect,
+    ColorStop, DissolveConfig, DissolveEffect, DissolvePattern, DissolvePhase, FlashBlendMode,
+    FlashConfig, FlashEffect, LoopMode, OutlineEffect, PaletteConfig, PaletteSwap, ShakeConfig,
+    ShakeEffect, SilhouetteConfig, SilhouetteEffect, SpriteEffectsDiagnostics,
+    SquashStretchConfig, SquashStretchEffect,
 };
 
 #[derive(Resource)]
@@ -121,6 +122,53 @@ pub fn showcase_hide_dissolve_config() -> DissolveConfig {
     showcase_dissolve_config()
 }
 
+pub fn showcase_shake_config() -> ShakeConfig {
+    ShakeConfig {
+        amplitude: 6.0,
+        frequency: 25.0,
+        decay: 0.9,
+        duration_secs: 0.35,
+        ..ShakeConfig::default()
+    }
+}
+
+pub fn showcase_looping_squash_config() -> SquashStretchConfig {
+    SquashStretchConfig {
+        amplitude: 0.15,
+        duration_secs: 0.35,
+        loop_mode: LoopMode::Forever,
+        ..showcase_grounded_squash_config()
+    }
+}
+
+pub fn showcase_color_ramp_flash_config() -> FlashConfig {
+    FlashConfig {
+        duration_secs: 0.25,
+        blend: FlashBlendMode::Tint,
+        intensity: 1.0,
+        color_ramp: Some(vec![
+            ColorStop::new(0.0, Color::WHITE),
+            ColorStop::new(0.3, Color::srgb(1.0, 0.8, 0.2)),
+            ColorStop::new(0.7, Color::srgb(1.0, 0.2, 0.1)),
+            ColorStop::new(1.0, Color::srgb(0.3, 0.0, 0.0)),
+        ]),
+        ..FlashConfig::default()
+    }
+}
+
+pub fn showcase_fire_dissolve_config() -> DissolveConfig {
+    DissolveConfig {
+        edge_width: 0.12,
+        edge_gradient: Some(vec![
+            ColorStop::new(0.0, Color::srgb(1.0, 1.0, 0.3)),
+            ColorStop::new(0.4, Color::srgb(1.0, 0.5, 0.0)),
+            ColorStop::new(1.0, Color::srgb(0.6, 0.0, 0.0)),
+        ]),
+        duration_secs: 0.6,
+        ..DissolveConfig::default()
+    }
+}
+
 pub fn showcase_silhouette_config() -> SilhouetteConfig {
     SilhouetteConfig {
         color: Color::srgba(0.18, 0.82, 1.0, 0.88),
@@ -176,6 +224,7 @@ pub fn setup_camera(
             top: px(20.0),
             width: px(430.0),
             padding: UiRect::all(px(14.0)),
+            flex_direction: FlexDirection::Column,
             ..default()
         },
         BackgroundColor(Color::srgba(0.03, 0.04, 0.07, 0.82)),
@@ -604,5 +653,48 @@ fn fill_ellipse(
 fn set_px(pixels: &mut [[u8; 4]], width: usize, x: usize, y: usize, color: [u8; 4]) {
     if x < width && y < pixels.len() / width {
         pixels[y * width + x] = color;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers for examples
+// ---------------------------------------------------------------------------
+
+/// Spawn a label below a world-space position.
+pub fn spawn_label(commands: &mut Commands, text: impl Into<String>, x: f32, y: f32) {
+    commands.spawn((
+        Text2d::new(text.into()),
+        TextFont {
+            font_size: 12.0,
+            ..default()
+        },
+        TextColor(Color::srgba(0.82, 0.86, 0.94, 0.88)),
+        Transform::from_xyz(x, y, 1.0),
+    ));
+}
+
+/// System: press R to reset all transient effects from the start.
+/// Works for both persistent and looping effects.
+pub fn reset_all_effects_on_r(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut flashes: Query<&mut FlashEffect>,
+    mut dissolves: Query<&mut DissolveEffect>,
+    mut squashes: Query<&mut SquashStretchEffect>,
+    mut shakes: Query<&mut ShakeEffect>,
+) {
+    if !keys.just_pressed(KeyCode::KeyR) {
+        return;
+    }
+    for mut e in &mut flashes {
+        e.restart();
+    }
+    for mut e in &mut dissolves {
+        e.restart();
+    }
+    for mut e in &mut squashes {
+        e.restart();
+    }
+    for mut e in &mut shakes {
+        e.restart();
     }
 }

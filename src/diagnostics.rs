@@ -6,6 +6,7 @@ pub struct SpriteEffectsDiagnostics {
     pub active_flashes: usize,
     pub active_dissolves: usize,
     pub active_squashes: usize,
+    pub active_shakes: usize,
     pub active_palette_swaps: usize,
     pub active_outlines: usize,
     pub active_silhouettes: usize,

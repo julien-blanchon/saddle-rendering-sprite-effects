@@ -7,7 +7,10 @@ use bevy::{
     time::{Real, Virtual},
 };
 
-use crate::config::{DissolveConfig, DissolvePhase, EffectTimeDomain, SquashStretchConfig};
+use crate::config::{
+    ColorStop, DissolveConfig, DissolvePhase, EffectTimeDomain, FlashConfig, ShakeConfig,
+    SquashStretchConfig,
+};
 
 pub(crate) const MIN_SCALE: f32 = 0.05;
 
@@ -54,6 +57,54 @@ pub(crate) fn dissolve_threshold(config: &DissolveConfig, elapsed_secs: f32) -> 
         DissolvePhase::Reveal => 1.0 - progress,
     }
 }
+
+/// Sample flash color, supporting optional color ramp.
+pub(crate) fn flash_color_at(config: &FlashConfig, elapsed_secs: f32) -> Color {
+    let Some(ref ramp) = config.color_ramp else {
+        return config.color;
+    };
+    if ramp.is_empty() {
+        return config.color;
+    }
+    let progress = effect_progress(config.duration_secs, elapsed_secs);
+    sample_color_ramp(ramp, progress)
+}
+
+/// Linear interpolation through a sorted list of color stops.
+pub(crate) fn sample_color_ramp(stops: &[ColorStop], t: f32) -> Color {
+    if stops.is_empty() {
+        return Color::WHITE;
+    }
+    if stops.len() == 1 || t <= stops[0].t {
+        return stops[0].color;
+    }
+    if t >= stops[stops.len() - 1].t {
+        return stops[stops.len() - 1].color;
+    }
+    // Find the two surrounding stops.
+    for i in 0..stops.len() - 1 {
+        if t >= stops[i].t && t <= stops[i + 1].t {
+            let span = stops[i + 1].t - stops[i].t;
+            if span <= f32::EPSILON {
+                return stops[i + 1].color;
+            }
+            let local_t = (t - stops[i].t) / span;
+            let a = stops[i].color.to_linear();
+            let b = stops[i + 1].color.to_linear();
+            return Color::LinearRgba(LinearRgba::new(
+                a.red + (b.red - a.red) * local_t,
+                a.green + (b.green - a.green) * local_t,
+                a.blue + (b.blue - a.blue) * local_t,
+                a.alpha + (b.alpha - a.alpha) * local_t,
+            ));
+        }
+    }
+    stops[stops.len() - 1].color
+}
+
+// ---------------------------------------------------------------------------
+// Squash/Stretch
+// ---------------------------------------------------------------------------
 
 pub(crate) fn sprite_pixel_rect(
     sprite: &Sprite,
@@ -154,4 +205,22 @@ pub(crate) fn sample_squash(
         .unwrap_or(Vec2::ZERO);
 
     SquashSample { scale, translation }
+}
+
+// ---------------------------------------------------------------------------
+// Shake
+// ---------------------------------------------------------------------------
+
+/// Sample shake displacement at a given elapsed time.
+pub(crate) fn sample_shake(config: &ShakeConfig, elapsed_secs: f32) -> Vec2 {
+    let progress = effect_progress(config.duration_secs, elapsed_secs);
+    let decay_envelope = 1.0 - config.decay * config.easing.sample_clamped(progress);
+
+    // Use sine waves at different frequencies for X and Y to avoid diagonal patterns.
+    let t = elapsed_secs * config.frequency * std::f32::consts::TAU;
+    let x = (t).sin() * config.amplitude * decay_envelope * config.axis.x;
+    // Offset Y frequency by golden ratio to decorrelate axes.
+    let y = (t * 1.618).sin() * config.amplitude * decay_envelope * config.axis.y;
+
+    Vec2::new(x, y)
 }

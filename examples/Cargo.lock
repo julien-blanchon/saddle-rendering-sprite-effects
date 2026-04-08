@@ -5045,6 +5045,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "saddle-rendering-sprite-effects-example-shake-delay-loop"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "saddle-pane",
+ "saddle-rendering-sprite-effects",
+ "saddle-rendering-sprite-effects-example-common",
+]
+
+[[package]]
 name = "saddle-rendering-sprite-effects-example-stress"
 version = "0.1.0"
 dependencies = [
