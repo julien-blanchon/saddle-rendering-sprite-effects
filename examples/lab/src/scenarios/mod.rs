@@ -6,14 +6,7 @@ use saddle_bevy_e2e::{
     actions::{assertions, inspect},
     scenario::Scenario,
 };
-use saddle_rendering_sprite_effects::{
-    DissolveCompletion, DissolveConfig, DissolveEffect, DissolvePattern, FlashConfig, FlashEffect,
-    OutlineConfig, OutlineEffect, PaletteSwap, SilhouetteConfig, SilhouetteEffect,
-    SpriteEffectsDiagnostics, SquashStretchEffect,
-};
-use saddle_rendering_sprite_effects_example_common::{
-    showcase_grounded_squash_config, showcase_hide_dissolve_config, showcase_screen_flash_config,
-};
+use saddle_rendering_sprite_effects::{DissolveEffect, SpriteEffectsDiagnostics};
 
 pub fn list_scenarios() -> Vec<&'static str> {
     vec![
@@ -77,18 +70,7 @@ fn sprite_effects_flash() -> Scenario {
             "Trigger the cheap tint flash and the proxy-backed screen flash together, then capture peak and recovery frames.",
         )
         .then(Action::WaitFrames(10))
-        .then(Action::Custom(Box::new(|world: &mut World| {
-            let lab = *world.resource::<crate::LabEntities>();
-            world.entity_mut(lab.native_flash).insert(FlashEffect::new(FlashConfig {
-                color: Color::srgb(1.0, 0.26, 0.26),
-                duration_secs: 0.18,
-                ..FlashConfig::default()
-            }));
-            world.entity_mut(lab.screen_flash).insert((
-                FlashEffect::new(showcase_screen_flash_config()),
-                SquashStretchEffect::new(showcase_grounded_squash_config()),
-            ));
-        })))
+        .then(support::flash_pair_action(Color::srgb(1.0, 0.26, 0.26)))
         .then(Action::WaitFrames(2))
         .then(assertions::custom("native tint flash modifies the sprite color", |world| {
             let lab = *world.resource::<crate::LabEntities>();
@@ -120,20 +102,7 @@ fn sprite_effects_dissolve() -> Scenario {
             "Run a mask-backed dissolve to completion, assert the mid-effect proxy state, then verify the entity ends hidden.",
         )
         .then(Action::WaitFrames(10))
-        .then(Action::Custom(Box::new(|world: &mut World| {
-            let lab = *world.resource::<crate::LabEntities>();
-            let assets = world.resource::<crate::LabAssets>().clone();
-            world.entity_mut(lab.dissolve_target).insert(Visibility::Inherited);
-            world
-                .entity_mut(lab.dissolve_target)
-                .insert(DissolveEffect::new(DissolveConfig {
-                    duration_secs: 0.30,
-                    pattern: DissolvePattern::Mask,
-                    mask_texture: Some(assets.mask),
-                    completion: DissolveCompletion::HideEntity,
-                    ..showcase_hide_dissolve_config()
-                }));
-        })))
+        .then(support::dissolve_target_action())
         .then(Action::WaitFrames(8))
         .then(assertions::custom("dissolve is active and proxied mid-transition", |world| {
             let lab = *world.resource::<crate::LabEntities>();
@@ -162,15 +131,7 @@ fn sprite_effects_palette_swap() -> Scenario {
         .then(Action::WaitFrames(10))
         .then(Action::Screenshot("sprite_effects_palette_before".into()))
         .then(Action::WaitFrames(1))
-        .then(Action::Custom(Box::new(|world: &mut World| {
-            let lab = *world.resource::<crate::LabEntities>();
-            world
-                .entity_mut(lab.palette_target)
-                .get_mut::<PaletteSwap>()
-                .expect("palette target should exist")
-                .config
-                .target_row = 3;
-        })))
+        .then(support::set_palette_row_action(3))
         .then(Action::WaitFrames(4))
         .then(assertions::custom("palette row switches to the requested bank", |world| {
             let lab = *world.resource::<crate::LabEntities>();
@@ -189,16 +150,7 @@ fn sprite_effects_atlas_animation() -> Scenario {
             "Keep the atlas sprite animating while a screen flash and dissolve run through the proxy path, then capture both the active and recovered frames.",
         )
         .then(Action::WaitFrames(6))
-        .then(Action::Custom(Box::new(|world: &mut World| {
-            let lab = *world.resource::<crate::LabEntities>();
-            world.entity_mut(lab.atlas_target).insert((
-                FlashEffect::new(showcase_screen_flash_config()),
-                DissolveEffect::new(DissolveConfig {
-                    duration_secs: 0.28,
-                    ..showcase_hide_dissolve_config()
-                }),
-            ));
-        })))
+        .then(support::atlas_combo_action())
         .then(Action::WaitFrames(12))
         .then(assertions::custom(
             "atlas animation advances while proxy effects are active",
@@ -233,32 +185,7 @@ fn sprite_effects_outline_silhouette() -> Scenario {
             "Apply an outline to one showcase actor, occlude a second actor, and verify its silhouette proxy sorts in front for readability.",
         )
         .then(Action::WaitFrames(10))
-        .then(Action::Custom(Box::new(|world: &mut World| {
-            let lab = *world.resource::<crate::LabEntities>();
-            world.entity_mut(lab.native_flash).insert(OutlineEffect::new(OutlineConfig {
-                color: Color::srgba(0.03, 0.04, 0.06, 0.96),
-                width_pixels: 3.0,
-                alpha_threshold: 0.05,
-            }));
-            world.entity_mut(lab.screen_flash).insert((
-                OutlineEffect::new(OutlineConfig {
-                    color: Color::srgba(1.0, 0.93, 0.84, 0.98),
-                    width_pixels: 2.0,
-                    alpha_threshold: 0.05,
-                }),
-                SilhouetteEffect::new(SilhouetteConfig {
-                    color: Color::srgba(0.16, 0.82, 1.0, 0.92),
-                    tint_strength: 1.0,
-                    alpha_threshold: 0.05,
-                    sort_offset: 1.2,
-                }),
-            ));
-            world.spawn((
-                Name::new("Silhouette Occluder"),
-                Sprite::from_color(Color::srgba(0.07, 0.09, 0.11, 0.97), Vec2::new(180.0, 160.0)),
-                Transform::from_xyz(-145.0, 180.0, 0.6),
-            ));
-        })))
+        .then(support::outline_silhouette_action())
         .then(Action::WaitFrames(4))
         .then(assertions::custom(
             "outline and silhouette paths both activate shader proxies",
@@ -290,31 +217,7 @@ fn sprite_effects_stress() -> Scenario {
             "Burst flash, dissolve, and squash across the dense stress grid, then verify cleanup while palette proxies stay resident.",
         )
         .then(Action::WaitFrames(10))
-        .then(Action::Custom(Box::new(|world: &mut World| {
-            let entities: Vec<Entity> = {
-                let mut query = world.query_filtered::<Entity, With<crate::StressTarget>>();
-                query.iter(world).collect()
-            };
-            for (index, entity) in entities.into_iter().enumerate() {
-                if index % 3 == 0 {
-                    world
-                        .entity_mut(entity)
-                        .insert(FlashEffect::new(showcase_screen_flash_config()));
-                }
-                if index % 4 == 0 {
-                    world
-                        .entity_mut(entity)
-                        .insert(SquashStretchEffect::new(showcase_grounded_squash_config()));
-                }
-                if index % 6 == 0 {
-                    world.entity_mut(entity).insert(DissolveEffect::new(DissolveConfig {
-                        duration_secs: 0.24,
-                        completion: DissolveCompletion::RestoreVisible,
-                        ..showcase_hide_dissolve_config()
-                    }));
-                }
-            }
-        })))
+        .then(support::stress_burst_action())
         .then(Action::WaitFrames(4))
         .then(assertions::custom("stress burst activates many concurrent effects", |world| {
             let diagnostics = world.resource::<SpriteEffectsDiagnostics>();
