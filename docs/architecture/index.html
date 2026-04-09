@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script>
+			(() => {
+				document.documentElement.classList.add('js');
+				const storageKey = 'docs-theme';
+				const storedTheme = localStorage.getItem(storageKey);
+				const isDark =
+					storedTheme === 'dark' ||
+					(storedTheme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+				document.documentElement.classList.toggle('dark', isDark);
+				document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+			})();
+		</script>
+		<link href="../../_app/immutable/entry/start.BOnF-lIo.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CAFrxc2P.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/D6rU7RKI.js" rel="modulepreload">
+		<link href="../../_app/immutable/entry/app.ZxP804e3.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/D2PL5qU_.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/DsnmJJEf.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CGbRUU1n.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/0.BaRuJXNu.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/CRgbvlDb.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/XxeuNhOl.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/D3udy8KQ.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/2.CbyLGUrZ.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/DlSJx94Y.js" rel="modulepreload">
+		<link href="../../_app/immutable/nodes/5.BOp3_yHr.js" rel="modulepreload">
+		<link href="../../_app/immutable/chunks/O7QY0ZL7.js" rel="modulepreload">
+		<!--12qhfyh--><meta name="theme-color" content="#ffffff"/> <link rel="icon" type="image/svg+xml" href="../../favicon.svg"/> <meta name="description" content="Sprite feedback effects for Bevy 2D games"/><!----><!--1bpnej--><!--[0--><meta name="description" content="`saddle-rendering-sprite-effects` Architecture documentation"/><!--]--><!----><title>`saddle-rendering-sprite-effects` Architecture - saddle-rendering-sprite-effects</title>
+		<link href="../../_app/immutable/assets/manifest.DAGDUwuc.css" rel="stylesheet">
+		<link href="../../_app/immutable/assets/0.Cu___w4E.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents"><!--[--><!--[0--><!--[--><!--[0--><!--[--><main class="relative h-dvh bg-background text-foreground"><div class="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-border bg-background px-4 py-1.5 lg:hidden"><a href="../../" class="inline-flex items-center gap-1 px-2 py-2 text-sm tracking-tight text-foreground"><span class="font-medium tracking-tight text-foreground">saddle-rendering-sprite-effects</span></a> <button class="-mr-2 inline-flex size-10 items-center justify-center gap-2 rounded-sm text-sm whitespace-nowrap text-foreground transition-colors duration-150 ease-out hover:bg-background-muted lg:hidden" aria-label="Toggle menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="20" height="20" aria-hidden="true"><!--[-1--><!--]--><path d="M4 6H28V8H4z"></path><path d="M4 24H28V26H4z"></path><path d="M4 12H28V14H4z"></path><path d="M4 18H28V20H4z"></path></svg><!----></button></div> <!--[-1--><!--]--><!----> <div class="flex h-full w-full min-w-0 lg:grid lg:grid-cols-[22rem_minmax(0,1fr)] lg:pr-4 xl:grid-cols-[22rem_minmax(0,56rem)_18rem] xl:justify-center"><div class="hidden lg:block"><aside class="flex h-dvh flex-col bg-background" aria-label="Documentation sidebar"><div class="flex flex-col gap-4 p-4"><a href="../../" class="flex items-center gap-2"><span class="text-xl font-medium tracking-tight text-foreground">saddle-rendering-sprite-effects</span></a> <!--[0--><button type="button" class="group inset-shadow relative flex h-9 w-full items-center gap-2 rounded-sm bg-background-inset px-3 py-1.5 text-sm font-medium text-foreground-muted/70 transition-[color] duration-150 ease-out hover:text-foreground-muted"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true" class="text-foreground-muted/70"><!--[-1--><!--]--><path d="M29,27.5859l-7.5521-7.5521a11.0177,11.0177,0,1,0-1.4141,1.4141L27.5859,29ZM4,13a9,9,0,1,1,9,9A9.01,9.01,0,0,1,4,13Z"></path></svg><!----> <span class="flex-1 text-left">Search...</span> <!--[0--><kbd class="card pointer-events-none relative hidden h-5 items-center gap-1 rounded-xs bg-background px-1.5 font-mono text-[10px] font-medium text-foreground-muted/70 select-none sm:flex">⌘ K</kbd><!--]--></button><!--]--><!----></div> <div class="relative flex flex-col overflow-hidden flex-1 svelte-1lcbi17"><div class="scrollbar-hide min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto p-4 svelte-1lcbi17" style="mask-image: linear-gradient(to bottom, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 16px, black calc(100% - 16px), transparent);"><nav class="flex flex-col space-y-1" aria-label="Documentation pages"><h4 class="mb-2 ml-2 text-xs font-medium tracking-wide text-foreground-muted/70 uppercase">Docs</h4> <!--[--><!--[-1--><a href="../../" class="block rounded-sm px-3 py-1.5 text-sm tracking-normal transition-all duration-150 ease-out text-foreground-muted hover:bg-background-muted hover:text-foreground">Overview</a><!--]--><!--[0--><button class="flex w-full items-center justify-between rounded-sm px-3 py-1.5 text-sm font-medium tracking-normal transition-all duration-150 ease-out hover:bg-background-muted hover:text-foreground text-foreground-muted"><span>Documentation</span> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true" class="size-4 transition-transform duration-150"><!--[-1--><!--]--><path d="M22 16 12 26 10.6 24.6 19.2 16 10.6 7.4 12 6z"></path></svg><!----></button> <!--[-1--><!--]--><!--]--><!--[0--><button class="flex w-full items-center justify-between rounded-sm px-3 py-1.5 text-sm font-medium tracking-normal transition-all duration-150 ease-out hover:bg-background-muted hover:text-foreground text-foreground-muted"><span>Demos</span> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true" class="size-4 transition-transform duration-150"><!--[-1--><!--]--><path d="M22 16 12 26 10.6 24.6 19.2 16 10.6 7.4 12 6z"></path></svg><!----></button> <!--[-1--><!--]--><!--]--><!--]--></nav><!----></div></div><!----> <div class="flex items-center gap-1 p-4"><!--[0--><button type="button" class="group transition-scale inset-shadow relative inline-flex size-7 items-center justify-center rounded-sm bg-background-inset text-foreground duration-150 ease-out active:scale-[0.95]" aria-label="Switch to dark mode"><span class="sr-only">Switch to dark mode</span> <span class="transition-transform duration-150 ease-out"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true"><!--[-1--><!--]--><path d="M16,12a4,4,0,1,1-4,4,4.0045,4.0045,0,0,1,4-4m0-2a6,6,0,1,0,6,6,6,6,0,0,0-6-6Z" transform="translate(0 .005)"></path><path d="M6.854 5.375H8.854V10.333H6.854z" transform="rotate(-45 7.86 7.856)"></path><path d="M2 15.005H7V17.005000000000003H2z"></path><path d="M5.375 23.147H10.333V25.147H5.375z" transform="rotate(-45 7.86 24.149)"></path><path d="M15 25.005H17V30.005H15z"></path><path d="M23.147 21.668H25.147V26.625999999999998H23.147z" transform="rotate(-45 24.152 24.149)"></path><path d="M25 15.005H30V17.005000000000003H25z"></path><path d="M21.668 6.854H26.625999999999998V8.854H21.668z" transform="rotate(-45 24.152 7.856)"></path><path d="M15 2.005H17V7.005H15z"></path></svg><!----></span> <span class="absolute transition-transform duration-150 ease-out scale-0 blur-[2px]"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true"><!--[-1--><!--]--><path d="M13.5025,5.4136A15.0755,15.0755,0,0,0,25.096,23.6082a11.1134,11.1134,0,0,1-7.9749,3.3893c-.1385,0-.2782.0051-.4178,0A11.0944,11.0944,0,0,1,13.5025,5.4136M14.98,3a1.0024,1.0024,0,0,0-.1746.0156A13.0959,13.0959,0,0,0,16.63,28.9973c.1641.006.3282,0,.4909,0a13.0724,13.0724,0,0,0,10.702-5.5556,1.0094,1.0094,0,0,0-.7833-1.5644A13.08,13.08,0,0,1,15.8892,4.38,1.0149,1.0149,0,0,0,14.98,3Z"></path></svg><!----></span></button><!--]--> <!--[0--><a class="group transition-scale inset-shadow relative inline-flex size-7 cursor-pointer items-center justify-center rounded-sm bg-background-inset text-foreground duration-150 ease-out active:scale-[0.95]" href="https://github.com/julien-blanchon/saddle-rendering-sprite-effects" target="_blank" rel="noreferrer" aria-label="Open project repository (opens in a new tab)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true" class="size-4 flex-none"><!--[-1--><!--]--><path fill-rule="evenodd" d="M16,2a14,14,0,0,0-4.43,27.28c.7.13,1-.3,1-.67s0-1.21,0-2.38c-3.89.84-4.71-1.88-4.71-1.88A3.71,3.71,0,0,0,6.24,22.3c-1.27-.86.1-.85.1-.85A2.94,2.94,0,0,1,8.48,22.9a3,3,0,0,0,4.08,1.16,2.93,2.93,0,0,1,.88-1.87c-3.1-.36-6.37-1.56-6.37-6.92a5.4,5.4,0,0,1,1.44-3.76,5,5,0,0,1,.14-3.7s1.17-.38,3.85,1.43a13.3,13.3,0,0,1,7,0c2.67-1.81,3.84-1.43,3.84-1.43a5,5,0,0,1,.14,3.7,5.4,5.4,0,0,1,1.44,3.76c0,5.38-3.27,6.56-6.39,6.91a3.33,3.33,0,0,1,.95,2.59c0,1.87,0,3.38,0,3.84s.25.81,1,.67A14,14,0,0,0,16,2Z"></path></svg><!----></a><!--]--></div></aside><!----></div> <div class="inset-shadow relative mx-auto h-full w-full max-w-4xl min-w-0 overflow-hidden border border-border bg-background-inset pt-12 lg:my-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-visible lg:rounded-xl lg:pt-0"><div class="relative flex flex-col overflow-hidden mx-auto h-full w-full lg:max-h-[calc(100dvh-2rem)] svelte-1lcbi17"><div id="docs-content-container" class="scrollbar-hide min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto rounded-lg overscroll-none flex flex-col gap-8 px-4 py-8 lg:px-8 svelte-1lcbi17" style="mask-image: linear-gradient(to bottom, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 16px, black calc(100% - 16px), transparent);"><section class="min-w-0 flex-1 space-y-8"><div class="space-y-4"><!--[-1--><!--]--> <h1 class="scroll-m-20 text-3xl font-medium tracking-tight text-foreground">`saddle-rendering-sprite-effects` Architecture</h1> <!--[0--><p class="max-w-4xl text-base font-normal tracking-normal text-foreground-muted">`saddle-rendering-sprite-effects` Architecture documentation</p><!--]--> <!--[0--><!--[0--><div class="relative z-20 mt-8 flex w-full gap-2 lg:hidden"><!--[0--><div class="inset-shadow w-full rounded-md bg-background-inset p-1.5"><button type="button" aria-live="polite" aria-disabled="false" class="card relative inline-flex h-9 w-full font-medium shrink-0 overflow-hidden items-center justify-center gap-2 rounded-sm bg-background px-4 py-2 text-sm whitespace-nowrap text-foreground transition-[background-color] duration-150 ease-out hover:bg-background-muted disabled:pointer-events-none disabled:opacity-50 has-[>svg]:px-3 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=size-])]:size-4 flex-1"><span class="grid place-items-center" style="grid-template-areas: 'content';"><!----><span class="flex items-center gap-2 font-medium tracking-normal text-foreground will-change-transform" style="grid-area: content;"><!--[-1--><svg role="img" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="size-4 flex-none"><title>Markdown</title><path class="stroke-current" d="M1.212 5.5h21.576c.407 0 .712.317.712.679v11.549a.695.695 0 0 1-.712.677H1.212a.695.695 0 0 1-.712-.678V6.18c0-.362.305-.679.712-.679Z"></path><path class="fill-current" d="M3.03 15.96V7.946h2.425l2.424 2.946 2.424-2.946h2.424v8.014h-2.424v-4.596L7.88 14.31l-2.424-2.946v4.596H3.03Zm15.152 0-3.636-3.89h2.424V7.947h2.424v4.125h2.424l-3.636 3.889Z"></path></svg><!--]--> <span>Copy Markdown</span></span><!----></span></button></div><!--]--> <!--[0--><div class="inset-shadow relative rounded-md bg-background-inset p-1.5"><button id="mobile-doc-actions-menu-trigger" type="button" class="card relative inline-flex h-9 w-full font-medium shrink-0 overflow-hidden items-center justify-center gap-2 rounded-sm bg-background px-4 py-2 text-sm whitespace-nowrap text-foreground transition-[background-color] duration-150 ease-out hover:bg-background-muted disabled:pointer-events-none disabled:opacity-50 has-[>svg]:px-3 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=size-])]:size-4 flex-1 w-auto! px-2.5!" aria-label="More actions" aria-haspopup="menu" aria-controls="mobile-doc-actions-menu" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true" class="size-4"><!--[-1--><!--]--><circle cx="8" cy="16" r="2"></circle><circle cx="16" cy="16" r="2"></circle><circle cx="24" cy="16" r="2"></circle></svg><!----></button> <!--[-1--><!--]--></div><!--]--></div><!--]--><!--]--></div> <hr class="text-border"/> <div><!--[--><article data-doc-content="" class="w-full max-w-4xl"><!----><h2>Backend Choice</h2>
+<p><code>saddle-rendering-sprite-effects</code> uses the hybrid backend the brief recommended.</p>
+<ul>
+<li>Native <code>Sprite</code> + <code>Transform</code> path:<ul>
+<li>tint flash</li>
+<li>squash/stretch</li>
+</ul>
+</li>
+<li>Internal <code>Mesh2d</code> + <code>Material2d</code> proxy path:<ul>
+<li>dissolve</li>
+<li>palette swap</li>
+<li>screen-style flash</li>
+<li>alpha-edge outline</li>
+<li>silhouette tint</li>
+</ul>
+</li>
+</ul>
+<p>Why this split:</p>
+<ul>
+<li>flash tint and squash/stretch are cheap and do not need a shader</li>
+<li>dissolve, palette remap, outline, and silhouette are fundamentally per-pixel operations</li>
+<li>projects that only need hit flash and squash do not pay for a material-backed path</li>
+<li>projects that do need shader effects still trigger them through the same authored component surface</li>
+</ul>
+<p>The crate keeps those authored components low-level and parameter-driven. Gameplay- or demo-specific recipes belong in host code or example helpers, not in the core config API.</p>
+<h2>Runtime Flow</h2>
+<p><code>SpriteEffectsSystems</code> are ordered as:</p>
+<ol>
+<li><code>Prepare</code></li>
+<li><code>TickCpuEffects</code></li>
+<li><code>UpdateMaterials</code></li>
+<li><code>Cleanup</code></li>
+<li><code>Diagnostics</code></li>
+</ol>
+<h3><code>Prepare</code></h3>
+<ul>
+<li>restore authored sprite color if a native tint flash or proxy hid it last frame</li>
+<li>restore authored transform translation and scale if squash/stretch modified it last frame</li>
+<li>lazily create the shared quad mesh used by proxy children</li>
+<li>force nearest sampling on palette textures when requested</li>
+</ul>
+<h3><code>TickCpuEffects</code></h3>
+<ul>
+<li>advance flash, dissolve, and squash/stretch lifetimes</li>
+<li>write <code>SpriteEffectFinished</code> messages when temporary channels end</li>
+<li>apply native tint flash when the entity does not need a shader proxy</li>
+<li>apply transform deformation for squash/stretch</li>
+</ul>
+<h3><code>UpdateMaterials</code></h3>
+<ul>
+<li>decide whether each entity needs the proxy child this frame</li>
+<li>spawn or despawn the proxy child explicitly</li>
+<li>sync atlas-aware UV bounds, authored tint/alpha, flash data, dissolve data, palette data, outline data, and silhouette data into the proxy material</li>
+<li>hide the authored sprite by alpha while a proxy is active</li>
+</ul>
+<h3><code>Cleanup</code></h3>
+<ul>
+<li>on runtime deactivation, remove runtime-only state</li>
+<li>restore authored sprite color and transform before dropping the runtime-owned state</li>
+<li>despawn proxy children explicitly</li>
+</ul>
+<p>The public authored components are intentionally preserved during deactivate. This keeps schedule gating compatible with persistent authored state such as <code>PaletteSwap</code>, and lets a host re-activate the plugin without reconstructing its own config components.</p>
+<h3><code>Diagnostics</code></h3>
+<ul>
+<li>publish <code>SpriteEffectsDiagnostics</code></li>
+</ul>
+<h2>State Ownership</h2>
+<p>The authored components are public. Runtime-only state stays internal:</p>
+<ul>
+<li><code>FlashRuntime</code>, <code>DissolveRuntime</code>, <code>SquashRuntime</code></li>
+<li><code>PresentedSpriteState</code></li>
+<li><code>PresentedTransformState</code></li>
+<li><code>ShaderProxy</code></li>
+</ul>
+<p>This split matters because restoration has a single source of truth:</p>
+<ul>
+<li>sprite color and alpha restoration come from <code>PresentedSpriteState</code></li>
+<li>transform translation and scale restoration come from <code>PresentedTransformState</code></li>
+<li>proxy material tint and alpha are copied from the authored sprite color before the authored sprite is hidden</li>
+</ul>
+<p>The crate never mutates authored effect config to drive progression.</p>
+<p>When the runtime is deactivated, the crate drops only internal progression and presentation state. Public effect components remain the source of truth.</p>
+<h2>Overlap And Conflict Policy</h2>
+<p>Each entity gets one authored component slot per effect family.</p>
+<ul>
+<li>flash: restarting the component restarts the flash timer</li>
+<li>dissolve: restarting the component replaces the dissolve state immediately</li>
+<li>squash/stretch: restarting the component restarts the envelope immediately</li>
+<li>palette swap: changing the config updates the proxy material next frame</li>
+<li>outline: changing the config updates the proxy material next frame</li>
+<li>silhouette: changing the config updates the proxy material next frame</li>
+</ul>
+<p>The crate intentionally does not queue or blend multiple authored components of the same family on one entity. That policy would require a different API surface than “component is the source of truth”.</p>
+<h2>Atlas Compatibility</h2>
+<p>The proxy material tracks two UV spaces:</p>
+<ul>
+<li>local effect UVs in <code>[0, 1]</code></li>
+<li>authored source texture UV rects for the atlas frame</li>
+</ul>
+<p>Source sampling uses the atlas rect, while dissolve masks and directional patterns use local frame UVs. That keeps:</p>
+<ul>
+<li>left-to-right and radial dissolve behavior consistent across atlas frames</li>
+<li>mask textures authored in sprite-local UV space</li>
+<li>outlines confined to the current frame instead of bleeding across the full sheet</li>
+<li>silhouettes confined to the current frame&#39;s opaque pixels</li>
+<li>atlas animation compatible with proxy-backed effects</li>
+</ul>
+<h2>Pixel-Art Constraints</h2>
+<ul>
+<li>exact palette remap expects nearest sampling on the palette texture</li>
+<li>source textures should also use nearest sampling for pixel-art projects to avoid color bleed before lookup</li>
+<li>palette remap can either preserve source alpha or take alpha from the target palette row</li>
+<li>proxy sampling clamps to the current source rect with a half-texel inset to reduce atlas-edge bleed</li>
+</ul>
+<h2>Time Model</h2>
+<p>The crate intentionally separates scaled and unscaled time:</p>
+<ul>
+<li><code>EffectTimeDomain::GlobalScaled</code> uses <code>Time&lt;Virtual&gt;</code></li>
+<li><code>EffectTimeDomain::Unscaled</code> uses <code>Time&lt;Real&gt;</code></li>
+</ul>
+<p>This makes it valid to keep short flashes or squash/stretch envelopes alive through pause/hitstop while allowing dissolves to respect game-time scaling.</p>
+<h2>Performance Model</h2>
+<p>Cheap path:</p>
+<ul>
+<li>one <code>Sprite</code> mutation for tint flash</li>
+<li>one <code>Transform</code> mutation for squash/stretch</li>
+<li>no material allocation for entities that stay on the native path</li>
+</ul>
+<p>Shader path:</p>
+<ul>
+<li>one proxy child per active proxied entity</li>
+<li>one material asset per proxy child</li>
+<li>one shared quad mesh for all proxy children</li>
+<li>no per-frame mesh or material allocation after the proxy exists</li>
+</ul>
+<p>Tradeoff:</p>
+<ul>
+<li>persistent palette swaps, outlines, or silhouettes imply persistent proxy materials</li>
+<li>this is acceptable for moderate counts and predictable for stress scenes</li>
+<li>if a project wants palette remap on thousands of sprites at once, it should budget for that explicitly rather than expecting zero-cost recolor</li>
+</ul>
+<!----></article> <!----><!--]--><!----> <!--[-1--><!--]--><!----></div></section><!----></div></div><!----></div> <aside class="hidden xl:block xl:w-full xl:py-8 xl:pr-4 xl:pl-4" aria-label="Table of contents and document actions"><div class="sticky top-8 flex h-full max-h-[calc(100dvh-4rem)] min-h-0 flex-col"><!--[0--><div class="min-h-0 flex-1"><div class="contents"><!--[-1--><div class="hidden text-sm tracking-normal text-foreground-muted/70 lg:block">No headings</div><!--]--></div><!----></div><!--]--> <!--[0--><!--[0--><div class="mt-auto"><div class="flex flex-col gap-1 text-sm"><!--[0--><button type="button" aria-live="polite" aria-disabled="false" class="group/option flex items-center gap-2 overflow-hidden rounded-sm px-3 py-1.5 text-left font-medium tracking-normal text-foreground-muted transition-colors duration-150 ease-out hover:bg-background-muted hover:text-foreground"><span class="grid" style="grid-template-areas: 'content';"><!----><span class="flex items-center gap-2" style="grid-area: content;"><!--[-1--><svg role="img" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="size-4 flex-none"><title>Markdown</title><path class="stroke-current" d="M1.212 5.5h21.576c.407 0 .712.317.712.679v11.549a.695.695 0 0 1-.712.677H1.212a.695.695 0 0 1-.712-.678V6.18c0-.362.305-.679.712-.679Z"></path><path class="fill-current" d="M3.03 15.96V7.946h2.425l2.424 2.946 2.424-2.946h2.424v8.014h-2.424v-4.596L7.88 14.31l-2.424-2.946v4.596H3.03Zm15.152 0-3.636-3.89h2.424V7.947h2.424v4.125h2.424l-3.636 3.889Z"></path></svg><!--]--> <span>Copy as Markdown</span></span><!----></span></button><!--]--> <!--[0--><a class="group/option flex items-center gap-2 rounded-sm px-3 py-1.5 text-left font-medium tracking-normal text-foreground-muted transition-colors duration-150 ease-out hover:bg-background-muted hover:text-foreground" href="https://github.com/julien-blanchon/saddle-rendering-sprite-effects/blob/main/docs//saddle-rendering-sprite-effects/docs/architecture.md" target="_blank" rel="noreferrer"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true" class="size-4 flex-none"><!--[-1--><!--]--><path fill-rule="evenodd" d="M16,2a14,14,0,0,0-4.43,27.28c.7.13,1-.3,1-.67s0-1.21,0-2.38c-3.89.84-4.71-1.88-4.71-1.88A3.71,3.71,0,0,0,6.24,22.3c-1.27-.86.1-.85.1-.85A2.94,2.94,0,0,1,8.48,22.9a3,3,0,0,0,4.08,1.16,2.93,2.93,0,0,1,.88-1.87c-3.1-.36-6.37-1.56-6.37-6.92a5.4,5.4,0,0,1,1.44-3.76,5,5,0,0,1,.14-3.7s1.17-.38,3.85,1.43a13.3,13.3,0,0,1,7,0c2.67-1.81,3.84-1.43,3.84-1.43a5,5,0,0,1,.14,3.7,5.4,5.4,0,0,1,1.44,3.76c0,5.38-3.27,6.56-6.39,6.91a3.33,3.33,0,0,1,.95,2.59c0,1.87,0,3.38,0,3.84s.25.81,1,.67A14,14,0,0,0,16,2Z"></path></svg><!----> <span>Open in GitHub</span> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor" preserveAspectRatio="xMidYMid meet" width="16" height="16" aria-hidden="true" class="ml-auto size-4 flex-none"><!--[-1--><!--]--><path d="M26,28H6a2.0027,2.0027,0,0,1-2-2V6A2.0027,2.0027,0,0,1,6,4H16V6H6V26H26V16h2V26A2.0027,2.0027,0,0,1,26,28Z"></path><path d="M20 2 20 4 26.586 4 18 12.586 19.414 14 28 5.414 28 12 30 12 30 2 20 2z"></path></svg><!----> <span class="sr-only">(opens in a new tab)</span></a><!--]--> <!--[-1--><!--]--> <!--[-1--><!--]--></div></div><!--]--><!--]--></div></aside></div></main><!--]--><!--]--><!----> <!--[0--><!--[-1--><!--]--><!--]--><!--]--><!--]--> <!--[-1--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_1uktcwt = {
+						base: new URL("../..", location).pathname.slice(0, -1),
+						assets: "/saddle-rendering-sprite-effects"
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../../_app/immutable/entry/start.BOnF-lIo.js"),
+						import("../../_app/immutable/entry/app.ZxP804e3.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 2, 5],
+							data: [null,null,{type:"data",data:{html:"\u003Ch2>Backend Choice\u003C/h2>\n\u003Cp>\u003Ccode>saddle-rendering-sprite-effects\u003C/code> uses the hybrid backend the brief recommended.\u003C/p>\n\u003Cul>\n\u003Cli>Native \u003Ccode>Sprite\u003C/code> + \u003Ccode>Transform\u003C/code> path:\u003Cul>\n\u003Cli>tint flash\u003C/li>\n\u003Cli>squash/stretch\u003C/li>\n\u003C/ul>\n\u003C/li>\n\u003Cli>Internal \u003Ccode>Mesh2d\u003C/code> + \u003Ccode>Material2d\u003C/code> proxy path:\u003Cul>\n\u003Cli>dissolve\u003C/li>\n\u003Cli>palette swap\u003C/li>\n\u003Cli>screen-style flash\u003C/li>\n\u003Cli>alpha-edge outline\u003C/li>\n\u003Cli>silhouette tint\u003C/li>\n\u003C/ul>\n\u003C/li>\n\u003C/ul>\n\u003Cp>Why this split:\u003C/p>\n\u003Cul>\n\u003Cli>flash tint and squash/stretch are cheap and do not need a shader\u003C/li>\n\u003Cli>dissolve, palette remap, outline, and silhouette are fundamentally per-pixel operations\u003C/li>\n\u003Cli>projects that only need hit flash and squash do not pay for a material-backed path\u003C/li>\n\u003Cli>projects that do need shader effects still trigger them through the same authored component surface\u003C/li>\n\u003C/ul>\n\u003Cp>The crate keeps those authored components low-level and parameter-driven. Gameplay- or demo-specific recipes belong in host code or example helpers, not in the core config API.\u003C/p>\n\u003Ch2>Runtime Flow\u003C/h2>\n\u003Cp>\u003Ccode>SpriteEffectsSystems\u003C/code> are ordered as:\u003C/p>\n\u003Col>\n\u003Cli>\u003Ccode>Prepare\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>TickCpuEffects\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>UpdateMaterials\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>Cleanup\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>Diagnostics\u003C/code>\u003C/li>\n\u003C/ol>\n\u003Ch3>\u003Ccode>Prepare\u003C/code>\u003C/h3>\n\u003Cul>\n\u003Cli>restore authored sprite color if a native tint flash or proxy hid it last frame\u003C/li>\n\u003Cli>restore authored transform translation and scale if squash/stretch modified it last frame\u003C/li>\n\u003Cli>lazily create the shared quad mesh used by proxy children\u003C/li>\n\u003Cli>force nearest sampling on palette textures when requested\u003C/li>\n\u003C/ul>\n\u003Ch3>\u003Ccode>TickCpuEffects\u003C/code>\u003C/h3>\n\u003Cul>\n\u003Cli>advance flash, dissolve, and squash/stretch lifetimes\u003C/li>\n\u003Cli>write \u003Ccode>SpriteEffectFinished\u003C/code> messages when temporary channels end\u003C/li>\n\u003Cli>apply native tint flash when the entity does not need a shader proxy\u003C/li>\n\u003Cli>apply transform deformation for squash/stretch\u003C/li>\n\u003C/ul>\n\u003Ch3>\u003Ccode>UpdateMaterials\u003C/code>\u003C/h3>\n\u003Cul>\n\u003Cli>decide whether each entity needs the proxy child this frame\u003C/li>\n\u003Cli>spawn or despawn the proxy child explicitly\u003C/li>\n\u003Cli>sync atlas-aware UV bounds, authored tint/alpha, flash data, dissolve data, palette data, outline data, and silhouette data into the proxy material\u003C/li>\n\u003Cli>hide the authored sprite by alpha while a proxy is active\u003C/li>\n\u003C/ul>\n\u003Ch3>\u003Ccode>Cleanup\u003C/code>\u003C/h3>\n\u003Cul>\n\u003Cli>on runtime deactivation, remove runtime-only state\u003C/li>\n\u003Cli>restore authored sprite color and transform before dropping the runtime-owned state\u003C/li>\n\u003Cli>despawn proxy children explicitly\u003C/li>\n\u003C/ul>\n\u003Cp>The public authored components are intentionally preserved during deactivate. This keeps schedule gating compatible with persistent authored state such as \u003Ccode>PaletteSwap\u003C/code>, and lets a host re-activate the plugin without reconstructing its own config components.\u003C/p>\n\u003Ch3>\u003Ccode>Diagnostics\u003C/code>\u003C/h3>\n\u003Cul>\n\u003Cli>publish \u003Ccode>SpriteEffectsDiagnostics\u003C/code>\u003C/li>\n\u003C/ul>\n\u003Ch2>State Ownership\u003C/h2>\n\u003Cp>The authored components are public. Runtime-only state stays internal:\u003C/p>\n\u003Cul>\n\u003Cli>\u003Ccode>FlashRuntime\u003C/code>, \u003Ccode>DissolveRuntime\u003C/code>, \u003Ccode>SquashRuntime\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>PresentedSpriteState\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>PresentedTransformState\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>ShaderProxy\u003C/code>\u003C/li>\n\u003C/ul>\n\u003Cp>This split matters because restoration has a single source of truth:\u003C/p>\n\u003Cul>\n\u003Cli>sprite color and alpha restoration come from \u003Ccode>PresentedSpriteState\u003C/code>\u003C/li>\n\u003Cli>transform translation and scale restoration come from \u003Ccode>PresentedTransformState\u003C/code>\u003C/li>\n\u003Cli>proxy material tint and alpha are copied from the authored sprite color before the authored sprite is hidden\u003C/li>\n\u003C/ul>\n\u003Cp>The crate never mutates authored effect config to drive progression.\u003C/p>\n\u003Cp>When the runtime is deactivated, the crate drops only internal progression and presentation state. Public effect components remain the source of truth.\u003C/p>\n\u003Ch2>Overlap And Conflict Policy\u003C/h2>\n\u003Cp>Each entity gets one authored component slot per effect family.\u003C/p>\n\u003Cul>\n\u003Cli>flash: restarting the component restarts the flash timer\u003C/li>\n\u003Cli>dissolve: restarting the component replaces the dissolve state immediately\u003C/li>\n\u003Cli>squash/stretch: restarting the component restarts the envelope immediately\u003C/li>\n\u003Cli>palette swap: changing the config updates the proxy material next frame\u003C/li>\n\u003Cli>outline: changing the config updates the proxy material next frame\u003C/li>\n\u003Cli>silhouette: changing the config updates the proxy material next frame\u003C/li>\n\u003C/ul>\n\u003Cp>The crate intentionally does not queue or blend multiple authored components of the same family on one entity. That policy would require a different API surface than “component is the source of truth”.\u003C/p>\n\u003Ch2>Atlas Compatibility\u003C/h2>\n\u003Cp>The proxy material tracks two UV spaces:\u003C/p>\n\u003Cul>\n\u003Cli>local effect UVs in \u003Ccode>[0, 1]\u003C/code>\u003C/li>\n\u003Cli>authored source texture UV rects for the atlas frame\u003C/li>\n\u003C/ul>\n\u003Cp>Source sampling uses the atlas rect, while dissolve masks and directional patterns use local frame UVs. That keeps:\u003C/p>\n\u003Cul>\n\u003Cli>left-to-right and radial dissolve behavior consistent across atlas frames\u003C/li>\n\u003Cli>mask textures authored in sprite-local UV space\u003C/li>\n\u003Cli>outlines confined to the current frame instead of bleeding across the full sheet\u003C/li>\n\u003Cli>silhouettes confined to the current frame&#39;s opaque pixels\u003C/li>\n\u003Cli>atlas animation compatible with proxy-backed effects\u003C/li>\n\u003C/ul>\n\u003Ch2>Pixel-Art Constraints\u003C/h2>\n\u003Cul>\n\u003Cli>exact palette remap expects nearest sampling on the palette texture\u003C/li>\n\u003Cli>source textures should also use nearest sampling for pixel-art projects to avoid color bleed before lookup\u003C/li>\n\u003Cli>palette remap can either preserve source alpha or take alpha from the target palette row\u003C/li>\n\u003Cli>proxy sampling clamps to the current source rect with a half-texel inset to reduce atlas-edge bleed\u003C/li>\n\u003C/ul>\n\u003Ch2>Time Model\u003C/h2>\n\u003Cp>The crate intentionally separates scaled and unscaled time:\u003C/p>\n\u003Cul>\n\u003Cli>\u003Ccode>EffectTimeDomain::GlobalScaled\u003C/code> uses \u003Ccode>Time&lt;Virtual&gt;\u003C/code>\u003C/li>\n\u003Cli>\u003Ccode>EffectTimeDomain::Unscaled\u003C/code> uses \u003Ccode>Time&lt;Real&gt;\u003C/code>\u003C/li>\n\u003C/ul>\n\u003Cp>This makes it valid to keep short flashes or squash/stretch envelopes alive through pause/hitstop while allowing dissolves to respect game-time scaling.\u003C/p>\n\u003Ch2>Performance Model\u003C/h2>\n\u003Cp>Cheap path:\u003C/p>\n\u003Cul>\n\u003Cli>one \u003Ccode>Sprite\u003C/code> mutation for tint flash\u003C/li>\n\u003Cli>one \u003Ccode>Transform\u003C/code> mutation for squash/stretch\u003C/li>\n\u003Cli>no material allocation for entities that stay on the native path\u003C/li>\n\u003C/ul>\n\u003Cp>Shader path:\u003C/p>\n\u003Cul>\n\u003Cli>one proxy child per active proxied entity\u003C/li>\n\u003Cli>one material asset per proxy child\u003C/li>\n\u003Cli>one shared quad mesh for all proxy children\u003C/li>\n\u003Cli>no per-frame mesh or material allocation after the proxy exists\u003C/li>\n\u003C/ul>\n\u003Cp>Tradeoff:\u003C/p>\n\u003Cul>\n\u003Cli>persistent palette swaps, outlines, or silhouettes imply persistent proxy materials\u003C/li>\n\u003Cli>this is acceptable for moderate counts and predictable for stress scenes\u003C/li>\n\u003Cli>if a project wants palette remap on thousands of sprites at once, it should budget for that explicitly rather than expecting zero-cost recolor\u003C/li>\n\u003C/ul>\n",title:"`saddle-rendering-sprite-effects` Architecture",description:"`saddle-rendering-sprite-effects` Architecture documentation",rawMarkdown:"## Backend Choice\n\n`saddle-rendering-sprite-effects` uses the hybrid backend the brief recommended.\n\n- Native `Sprite` + `Transform` path:\n  - tint flash\n  - squash/stretch\n- Internal `Mesh2d` + `Material2d` proxy path:\n  - dissolve\n  - palette swap\n  - screen-style flash\n  - alpha-edge outline\n  - silhouette tint\n\nWhy this split:\n\n- flash tint and squash/stretch are cheap and do not need a shader\n- dissolve, palette remap, outline, and silhouette are fundamentally per-pixel operations\n- projects that only need hit flash and squash do not pay for a material-backed path\n- projects that do need shader effects still trigger them through the same authored component surface\n\nThe crate keeps those authored components low-level and parameter-driven. Gameplay- or demo-specific recipes belong in host code or example helpers, not in the core config API.\n\n## Runtime Flow\n\n`SpriteEffectsSystems` are ordered as:\n\n1. `Prepare`\n2. `TickCpuEffects`\n3. `UpdateMaterials`\n4. `Cleanup`\n5. `Diagnostics`\n\n### `Prepare`\n\n- restore authored sprite color if a native tint flash or proxy hid it last frame\n- restore authored transform translation and scale if squash/stretch modified it last frame\n- lazily create the shared quad mesh used by proxy children\n- force nearest sampling on palette textures when requested\n\n### `TickCpuEffects`\n\n- advance flash, dissolve, and squash/stretch lifetimes\n- write `SpriteEffectFinished` messages when temporary channels end\n- apply native tint flash when the entity does not need a shader proxy\n- apply transform deformation for squash/stretch\n\n### `UpdateMaterials`\n\n- decide whether each entity needs the proxy child this frame\n- spawn or despawn the proxy child explicitly\n- sync atlas-aware UV bounds, authored tint/alpha, flash data, dissolve data, palette data, outline data, and silhouette data into the proxy material\n- hide the authored sprite by alpha while a proxy is active\n\n### `Cleanup`\n\n- on runtime deactivation, remove runtime-only state\n- restore authored sprite color and transform before dropping the runtime-owned state\n- despawn proxy children explicitly\n\nThe public authored components are intentionally preserved during deactivate. This keeps schedule gating compatible with persistent authored state such as `PaletteSwap`, and lets a host re-activate the plugin without reconstructing its own config components.\n\n### `Diagnostics`\n\n- publish `SpriteEffectsDiagnostics`\n\n## State Ownership\n\nThe authored components are public. Runtime-only state stays internal:\n\n- `FlashRuntime`, `DissolveRuntime`, `SquashRuntime`\n- `PresentedSpriteState`\n- `PresentedTransformState`\n- `ShaderProxy`\n\nThis split matters because restoration has a single source of truth:\n\n- sprite color and alpha restoration come from `PresentedSpriteState`\n- transform translation and scale restoration come from `PresentedTransformState`\n- proxy material tint and alpha are copied from the authored sprite color before the authored sprite is hidden\n\nThe crate never mutates authored effect config to drive progression.\n\nWhen the runtime is deactivated, the crate drops only internal progression and presentation state. Public effect components remain the source of truth.\n\n## Overlap And Conflict Policy\n\nEach entity gets one authored component slot per effect family.\n\n- flash: restarting the component restarts the flash timer\n- dissolve: restarting the component replaces the dissolve state immediately\n- squash/stretch: restarting the component restarts the envelope immediately\n- palette swap: changing the config updates the proxy material next frame\n- outline: changing the config updates the proxy material next frame\n- silhouette: changing the config updates the proxy material next frame\n\nThe crate intentionally does not queue or blend multiple authored components of the same family on one entity. That policy would require a different API surface than “component is the source of truth”.\n\n## Atlas Compatibility\n\nThe proxy material tracks two UV spaces:\n\n- local effect UVs in `[0, 1]`\n- authored source texture UV rects for the atlas frame\n\nSource sampling uses the atlas rect, while dissolve masks and directional patterns use local frame UVs. That keeps:\n\n- left-to-right and radial dissolve behavior consistent across atlas frames\n- mask textures authored in sprite-local UV space\n- outlines confined to the current frame instead of bleeding across the full sheet\n- silhouettes confined to the current frame's opaque pixels\n- atlas animation compatible with proxy-backed effects\n\n## Pixel-Art Constraints\n\n- exact palette remap expects nearest sampling on the palette texture\n- source textures should also use nearest sampling for pixel-art projects to avoid color bleed before lookup\n- palette remap can either preserve source alpha or take alpha from the target palette row\n- proxy sampling clamps to the current source rect with a half-texel inset to reduce atlas-edge bleed\n\n## Time Model\n\nThe crate intentionally separates scaled and unscaled time:\n\n- `EffectTimeDomain::GlobalScaled` uses `Time\u003CVirtual>`\n- `EffectTimeDomain::Unscaled` uses `Time\u003CReal>`\n\nThis makes it valid to keep short flashes or squash/stretch envelopes alive through pause/hitstop while allowing dissolves to respect game-time scaling.\n\n## Performance Model\n\nCheap path:\n\n- one `Sprite` mutation for tint flash\n- one `Transform` mutation for squash/stretch\n- no material allocation for entities that stay on the native path\n\nShader path:\n\n- one proxy child per active proxied entity\n- one material asset per proxy child\n- one shared quad mesh for all proxy children\n- no per-frame mesh or material allocation after the proxy exists\n\nTradeoff:\n\n- persistent palette swaps, outlines, or silhouettes imply persistent proxy materials\n- this is acceptable for moderate counts and predictable for stress scenes\n- if a project wants palette remap on thousands of sprites at once, it should budget for that explicitly rather than expecting zero-cost recolor\n",slug:"architecture"},uses:{params:["slug"]}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>
